@@ -12,7 +12,6 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemToolSpec;
-import com.hypixel.hytale.server.core.command.system.MatchResult;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
@@ -25,7 +24,6 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
-import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import javax.annotation.Nonnull;
 import java.awt.*;
@@ -34,8 +32,7 @@ import java.util.*;
 
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.SearchGuiData> {
 
-    private String searchQuery = "";
-//    private final Collection<Item> visibleItems = new LinkedList<>();
+    private String searchQuery;
     private static final String[] PRIMARY_INTERACTION_VARS = new String[] {
         "Swing_Left_Damage",
         "Longsword_Swing_Left_Damage",
@@ -84,7 +81,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 var itemName = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
                 if (itemName == null) return true;
 
-                return !itemName.toLowerCase().toLowerCase().contains(searchQuery.toLowerCase());
+                return !itemName.toLowerCase().contains(searchQuery);
             });
         }
 
@@ -100,7 +97,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         for (Item item : items) {
 
             var tooltip = Message.empty();
-            tooltip.insert(Message.translation(item.getTranslationKey()).bold(true)).insert("\n");
+            tooltip.insert(Message.translation(item.getTranslationKey()).bold(true));
             boolean hasInfo = false;
 
             hasInfo |= addToolInfo(item, tooltip);
@@ -134,12 +131,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (tool == null) return false;
         ItemToolSpec[] specs = tool.getSpecs();
         if (specs == null) return false;
+        tooltip.insert("\n");
         addTooltipCategory(tooltip, "Tool");
 
         for (ItemToolSpec spec : specs) {
             addTooltipLine(tooltip, spec.getGatherType(), String.format("%.2f", spec.getPower()));
         }
-        tooltip.insert("\n");
         return true;
     }
 
@@ -159,6 +156,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
         if (interaction instanceof DamageEntityInteraction damageEntityInteraction) {
+            tooltip.insert("\n");
             addTooltipCategory(tooltip, "Weapon");
             try {
                 Field damageCalculatorField = DamageEntityInteraction.class.getDeclaredField("damageCalculator");
@@ -173,7 +171,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
-            tooltip.insert("\n");
             return true;
         } else {
             return false;
@@ -183,6 +180,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     private boolean addNpcLoot(Item item, Message tooltip) {
         Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
         if (itemDrops == null) return false;
+        tooltip.insert("\n");
         addTooltipCategory(tooltip, "Mob Loot");
         itemDrops.forEach((role, drop) -> {
 
@@ -194,20 +192,20 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             }
             addTooltipLine(tooltip, Message.translation(role), value);
         });
-        tooltip.insert("\n");
         return true;
     }
 
     private boolean addGeneral(Item item, Message tooltip) {
         double maxDurability = item.getMaxDurability();
         if (maxDurability <= 0) return false;
+        tooltip.insert("\n");
         addTooltipCategory(tooltip, "General");
         addTooltipLine(tooltip, "Durability", String.format("%.0f", maxDurability));
         return true;
     }
 
     private void addTooltipCategory(Message tooltip, String category) {
-        tooltip.insert(Message.raw(category).bold(true).color(Color.GRAY)).insert("\n");
+        tooltip.insert("\n").insert(Message.raw(category).bold(true).color(Color.GRAY));
     }
 
     private void addTooltipLine(Message tooltip, String label, String value) {
@@ -215,7 +213,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void addTooltipLine(Message tooltip, Message label, String value) {
-        tooltip.insert(label.insert(": ").bold(true).color("#93844c")).insert(value).insert("\n");
+        tooltip.insert("\n").insert(label.insert(": ").bold(true).color("#93844c")).insert(value);
     }
 
     public static class SearchGuiData {
@@ -228,17 +226,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String item;
         private String searchQuery;
 
-    }
-
-    private static class SearchResult {
-        public static final Comparator<SearchResult> COMPARATOR = Comparator.comparing((o) -> o.match);
-        private final String name;
-        private MatchResult match;
-
-        public SearchResult(String name, MatchResult match) {
-            this.name = name;
-            this.match = match;
-        }
     }
 
 }
