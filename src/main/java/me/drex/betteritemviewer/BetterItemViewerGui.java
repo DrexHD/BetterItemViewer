@@ -133,12 +133,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         for (Map.Entry<String, Item> entry : items.entrySet()) {
             Item item = entry.getValue();
 
-            if (cardsInCurrentRow == 0) {
-                commandBuilder.appendInline("#SubcommandCards", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
-            }
-
-            commandBuilder.append("#SubcommandCards[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_SearchItemIcon.ui");
-
             var tooltip = Message.empty();
             tooltip.insert(Message.translation(item.getTranslationKey()).bold(true)).insert("\n");
             boolean hasInfo = false;
@@ -147,6 +141,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             hasInfo |= addDamageInfo(item, tooltip);
 
             if (!hasInfo) continue;
+
+            if (cardsInCurrentRow == 0) {
+                commandBuilder.appendInline("#SubcommandCards", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
+            }
+
+            commandBuilder.append("#SubcommandCards[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_SearchItemIcon.ui");
 
             addTooltipCategory(tooltip, "General");
             addTooltipLine(tooltip, "Durability", String.format("%.0f", item.getMaxDurability()));
