@@ -29,6 +29,7 @@ import javax.annotation.Nonnull;
 import java.awt.*;
 import java.lang.reflect.Field;
 import java.util.*;
+import java.util.List;
 
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.SearchGuiData> {
 
@@ -71,7 +72,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void buildList(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        Collection<Item> items = new LinkedList<>(Main.ITEMS);
+        List<Item> items = new LinkedList<>(Main.ITEMS);
         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
 
         assert playerComponent != null;
@@ -84,6 +85,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 return !itemName.toLowerCase().contains(searchQuery);
             });
         }
+
+        items.sort((item1, item2) -> {
+            String name1 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item1.getTranslationKey()), "");
+            String name2 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item2.getTranslationKey()), "");
+            return name1.compareTo(name2);
+        });
 
         this.buildButtons(items, playerComponent, commandBuilder, eventBuilder);
     }
@@ -166,7 +173,21 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 baseDamageRawField.setAccessible(true);
                 Object2FloatMap<String> baseDamageRaw = (Object2FloatMap<String>) baseDamageRawField.get(damageCalculator);
 
-                baseDamageRaw.forEach((damageCause, damage) -> addTooltipLine(tooltip, damageCause, String.format("%.0f", damage)));
+                Field randomPercentageModifierField = DamageCalculator.class.getDeclaredField("randomPercentageModifier");
+                randomPercentageModifierField.setAccessible(true);
+                float randomPercentageModifier = randomPercentageModifierField.getFloat(damageCalculator);
+
+
+
+                baseDamageRaw.forEach((damageCause, damage) -> {
+                    String value;
+                    if (randomPercentageModifier > 0) {
+                        value = String.format("%.0f ±%.0f%%", damage, randomPercentageModifier * 100);
+                    } else {
+                        value = String.format("%.0f", damage);
+                    }
+                    addTooltipLine(tooltip, damageCause, value);
+                });
 
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 throw new RuntimeException(e);
