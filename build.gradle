@@ -1,0 +1,46 @@
+plugins {
+    id 'java'
+    id 'maven-publish'
+    id 'org.jetbrains.gradle.plugin.idea-ext' version '1.3'
+}
+
+version = project.version;
+
+java {
+    toolchain.languageVersion = JavaLanguageVersion.of(java_version)
+    withSourcesJar()
+    withJavadocJar()
+}
+
+javadoc {
+    options.addStringOption('Xdoclint:-missing', '-quiet')
+}
+
+repositories {
+    mavenCentral()
+}
+
+dependencies {
+    testImplementation platform('org.junit:junit-bom:5.10.0')
+    testImplementation 'org.junit.jupiter:junit-jupiter'
+    implementation(files("${project.hytaleHome}/release/package/game/latest/Server/HytaleServer.jar"))
+}
+
+test {
+    useJUnitPlatform()
+}
+
+processResources {
+
+}
+
+def serverRunDir = file("$projectDir/run")
+
+idea.project.settings.runConfigurations {
+    'HytaleServer'(org.jetbrains.gradle.ext.Application) {
+        mainClass = 'com.hypixel.hytale.Main'
+        moduleName = project.idea.module.name + '.main'
+        programParameters = "--assets \"${project.hytaleHome}/release/package/game/latest/Assets.zip\" --auth-mode AUTHENTICATED --mods ${file("src/main/").absolutePath}"
+        workingDirectory = serverRunDir.absolutePath
+    }
+}
