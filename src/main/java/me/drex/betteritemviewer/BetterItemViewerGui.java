@@ -95,7 +95,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         this.buildButtons(items, playerComponent, commandBuilder, eventBuilder);
     }
 
-    private void buildButtons(Collection<Item> items, @Nonnull Player player, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void buildButtons(Collection<Item> items, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#SubcommandCards");
         commandBuilder.set("#SubcommandSection.Visible", true);
         int rowIndex = 0;
@@ -109,7 +109,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
             hasInfo |= addToolInfo(item, tooltip);
             hasInfo |= addWeaponInfo(item, tooltip);
-            hasInfo |= addNpcLoot(player, item, tooltip);
+            hasInfo |= addNpcLoot(item, tooltip);
             hasInfo |= addGeneral(item, tooltip);
 
             if (!hasInfo) continue;
@@ -198,8 +198,8 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
     }
 
-    private boolean addNpcLoot(Player player, Item item, Message tooltip) {
-        Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.getOrCreateMobLootInfo(player.getWorld().getEntityStore().getStore()).get(item.getId());
+    private boolean addNpcLoot(Item item, Message tooltip) {
+        Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
         if (itemDrops == null) return false;
         tooltip.insert("\n");
         addTooltipCategory(tooltip, "Mob Loot");
