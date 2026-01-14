@@ -35,7 +35,7 @@ import java.util.*;
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.SearchGuiData> {
 
     private String searchQuery = "";
-    private final Map<String, Item> visibleItems = new HashMap<>();
+//    private final Collection<Item> visibleItems = new LinkedList<>();
     private static final String[] PRIMARY_INTERACTION_VARS = new String[] {
         "Swing_Left_Damage",
         "Longsword_Swing_Left_Damage",
@@ -74,71 +74,39 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void buildList(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
-        HashMap<String, Item> itemList = new HashMap<>(Main.ASSETS);
+        Collection<Item> items = new LinkedList<>(Main.ITEMS);
         Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
 
         assert playerComponent != null;
 
-        if (this.searchQuery.isEmpty()) {
-            this.visibleItems.clear();
-            this.visibleItems.putAll(itemList);
-            //Collections.sort(this.visibleCommands);
-        } else {
-            ObjectArrayList<SearchResult> results = new ObjectArrayList<>();
+        if (!this.searchQuery.isEmpty()) {
+            items.removeIf(item -> {
+                var itemName = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
+                if (itemName == null) return true;
 
-            for (Map.Entry<String, Item> entry : itemList.entrySet()) {
-                if (entry.getValue() != null) {
-                    results.add(new SearchResult(entry.getKey(), MatchResult.EXACT));
-                }
-            }
-
-            String[] terms = this.searchQuery.split(" ");
-
-            for (int termIndex = 0; termIndex < terms.length; ++termIndex) {
-                String term = terms[termIndex].toLowerCase(Locale.ENGLISH);
-
-                for (int cmdIndex = results.size() - 1; cmdIndex >= 0; --cmdIndex) {
-                    SearchResult result = results.get(cmdIndex);
-                    Item item = itemList.get(result.name);
-                    MatchResult match = MatchResult.NONE;
-                    if (item != null) {
-                        var message = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
-                        match = message != null && message.toLowerCase(Locale.ENGLISH).contains(term) ? MatchResult.EXACT : MatchResult.NONE;
-                    }
-
-                    if (match == MatchResult.NONE) {
-                        results.remove(cmdIndex);
-                    } else {
-                        result.match = result.match.min(match);
-                    }
-                }
-            }
-
-            results.sort(SearchResult.COMPARATOR);
-            this.visibleItems.clear();
-
-            for (SearchResult result : results) {
-                this.visibleItems.put(result.name, itemList.get(result.name));
-            }
+                return !itemName.toLowerCase().toLowerCase().contains(searchQuery.toLowerCase());
+            });
         }
-        this.buildButtons(this.visibleItems, playerComponent, commandBuilder, eventBuilder);
+
+        this.buildButtons(items, playerComponent, commandBuilder, eventBuilder);
     }
 
-    private void buildButtons(Map<String, Item> items, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void buildButtons(Collection<Item> items, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#SubcommandCards");
         commandBuilder.set("#SubcommandSection.Visible", true);
         int rowIndex = 0;
         int cardsInCurrentRow = 0;
 
-        for (Map.Entry<String, Item> entry : items.entrySet()) {
-            Item item = entry.getValue();
+        for (Item item : items) {
 
             var tooltip = Message.empty();
             tooltip.insert(Message.translation(item.getTranslationKey()).bold(true)).insert("\n");
             boolean hasInfo = false;
 
             hasInfo |= addToolInfo(item, tooltip);
-            hasInfo |= addDamageInfo(item, tooltip);
+            hasInfo |= addWeaponInfo(item, tooltip);
+            hasInfo |= addNpcLoot(item, tooltip);
+            hasInfo |= addGeneral(item, tooltip);
 
             if (!hasInfo) continue;
 
@@ -148,14 +116,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
             commandBuilder.append("#SubcommandCards[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_SearchItemIcon.ui");
 
-            addTooltipCategory(tooltip, "General");
-            addTooltipLine(tooltip, "Durability", String.format("%.0f", item.getMaxDurability()));
-
             commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "].TooltipTextSpans", tooltip);
-            commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", entry.getKey());
+            commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
             commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemName.TextSpans", Message.translation(item.getTranslationKey()));
             //commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandUsage.TextSpans", this.getSimplifiedUsage(item, playerComponent));
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of("Item", entry.getKey()));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of("Item", item.getId()));
             ++cardsInCurrentRow;
             if (cardsInCurrentRow >= 7) {
                 cardsInCurrentRow = 0;
@@ -178,7 +143,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         return true;
     }
 
-    private boolean addDamageInfo(Item item, Message tooltip) {
+    private boolean addWeaponInfo(Item item, Message tooltip) {
         // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
         String initialDamageInteraction = null;
         Map<String, String> interactionVars = item.getInteractionVars();
@@ -194,7 +159,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
         if (interaction instanceof DamageEntityInteraction damageEntityInteraction) {
-            addTooltipCategory(tooltip, "Damage");
+            addTooltipCategory(tooltip, "Weapon");
             try {
                 Field damageCalculatorField = DamageEntityInteraction.class.getDeclaredField("damageCalculator");
                 damageCalculatorField.setAccessible(true);
@@ -215,12 +180,42 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
     }
 
+    private boolean addNpcLoot(Item item, Message tooltip) {
+        Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
+        if (itemDrops == null) return false;
+        addTooltipCategory(tooltip, "Mob Loot");
+        itemDrops.forEach((role, drop) -> {
+
+            int min = drop.getKey();
+            int max = drop.getValue();
+            String value = String.format("%d - %d", min, max);
+            if (Objects.equals(min, max)) {
+                value = String.valueOf(min);
+            }
+            addTooltipLine(tooltip, Message.translation(role), value);
+        });
+        tooltip.insert("\n");
+        return true;
+    }
+
+    private boolean addGeneral(Item item, Message tooltip) {
+        double maxDurability = item.getMaxDurability();
+        if (maxDurability <= 0) return false;
+        addTooltipCategory(tooltip, "General");
+        addTooltipLine(tooltip, "Durability", String.format("%.0f", maxDurability));
+        return true;
+    }
+
     private void addTooltipCategory(Message tooltip, String category) {
         tooltip.insert(Message.raw(category).bold(true).color(Color.GRAY)).insert("\n");
     }
 
     private void addTooltipLine(Message tooltip, String label, String value) {
-        tooltip.insert(Message.raw(label + ": ").bold(true).color("#93844c")).insert(value).insert("\n");
+        addTooltipLine(tooltip, Message.raw(label), value);
+    }
+
+    private void addTooltipLine(Message tooltip, Message label, String value) {
+        tooltip.insert(label.insert(": ").bold(true).color("#93844c")).insert(value).insert("\n");
     }
 
     public static class SearchGuiData {
