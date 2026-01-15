@@ -2,11 +2,13 @@ package me.drex.betteritemviewer;
 
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDrop;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -61,24 +63,27 @@ public class Main extends JavaPlugin {
                 try {
                     BuilderInfo builderInfo = NPCPlugin.get().prepareRoleBuilderInfo(NPCPlugin.get().getIndex(roleName));
                     Builder<Role> roleBuilder = (Builder<Role>) builderInfo.getBuilder();
+                    Holder<EntityStore> holder = EntityStore.REGISTRY.newHolder();
+                    holder.addComponent(NPCEntity.getComponentType(), npcComponent);
                     BuilderSupport builderSupport = new BuilderSupport(
-                        NPCPlugin.get().getBuilderManager(), npcComponent, EntityStore.REGISTRY.newHolder(), new ExecutionContext(), roleBuilder, null
+                        NPCPlugin.get().getBuilderManager(), npcComponent, holder, new ExecutionContext(), roleBuilder, null
                     );
                     Role role = NPCPlugin.buildRole(roleBuilder, builderInfo, builderSupport, roleIndex);
                     PositionCacheSystems.initialisePositionCache(role, builderSupport.getStateEvaluator(), 0.0);
                     String dropListId = role.getDropListId();
-                    if (dropListId != null) {
-                        ItemDropList itemDropList = ItemDropList.getAssetMap().getAsset(dropListId);
-                        var drops = new LinkedList<ItemDrop>();
-                        itemDropList.getContainer().getAllDrops(drops);
+                    if (dropListId == null) continue;
+                    ItemDropList itemDropList = ItemDropList.getAssetMap().getAsset(dropListId);
+                    if (itemDropList == null) continue;
+                    var drops = new LinkedList<ItemDrop>();
+                    ItemDropContainer container = itemDropList.getContainer();
+                    if (container == null) continue;
+                    container.getAllDrops(drops);
 
-                        for (ItemDrop drop : drops) {
-                            String itemId = drop.getItemId();
-                            Map<String, Map.Entry<Integer, Integer>> dropRates = MOB_LOOT.computeIfAbsent(itemId, _ -> new HashMap<>());
-                            dropRates.put(role.getNameTranslationKey(), Map.entry(drop.getQuantityMin(), drop.getQuantityMax()));
-                        }
+                    for (ItemDrop drop : drops) {
+                        String itemId = drop.getItemId();
+                        Map<String, Map.Entry<Integer, Integer>> dropRates = MOB_LOOT.computeIfAbsent(itemId, _ -> new HashMap<>());
+                        dropRates.put(role.getNameTranslationKey(), Map.entry(drop.getQuantityMin(), drop.getQuantityMax()));
                     }
-
                 } catch (Throwable t) {
                     npcPlugin.getLogger().at(Level.WARNING).log("Error spawning role " + roleName + ": " + t.getMessage());
                     continue;
