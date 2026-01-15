@@ -32,6 +32,7 @@ public class Main extends JavaPlugin {
 
     public static Collection<Item> ITEMS = Collections.emptyList();
     public static Map<String, Map<String, Map.Entry<Integer, Integer>>> MOB_LOOT = new HashMap<>();
+    private static boolean discoveredMobLoot = false;
 
     public Main(@Nonnull JavaPluginInit init) {
         super(init);
@@ -42,10 +43,12 @@ public class Main extends JavaPlugin {
         super.setup();
         this.getCommandRegistry().registerCommand(new BetterItemViewerCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemAssetLoad);
-        this.getEventRegistry().register(StartWorldEvent.class, "default", Main::onStartWorld);
+        this.getEventRegistry().registerGlobal(StartWorldEvent.class, Main::onStartWorld);
     }
 
     private static void onStartWorld(StartWorldEvent event) {
+        if (discoveredMobLoot) return;
+        discoveredMobLoot = true;
         NPCPlugin npcPlugin = NPCPlugin.get();
         List<String> roles = npcPlugin.getRoleTemplateNames(true);
         TransformComponent transformComponent = new TransformComponent();
