@@ -24,7 +24,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 
 import javax.annotation.Nonnull;
-import java.awt.*;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
@@ -120,6 +119,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     private void updateStats(Item selectedItem, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ItemStats");
+        if (selectedItem == null) return;
         commandBuilder.set("#ItemTitle.Visible", true);
         commandBuilder.set("#ItemTitle #ItemIcon.ItemId", selectedItem.getId());
         commandBuilder.set("#ItemTitle #ItemName.TextSpans", Message.translation(selectedItem.getTranslationKey()));
@@ -286,109 +286,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
         commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Max Stack: " + item.getMaxStack()));
         i++;
-    }
-
-    private boolean addToolInfo(Item item, Message tooltip) {
-        ItemTool tool = item.getTool();
-        if (tool == null) return false;
-        ItemToolSpec[] specs = tool.getSpecs();
-        if (specs == null) return false;
-        tooltip.insert("\n");
-        addTooltipCategory(tooltip, "Tool");
-
-        for (ItemToolSpec spec : specs) {
-            addTooltipLine(tooltip, spec.getGatherType(), String.format("%.2f", spec.getPower()));
-        }
-        return true;
-    }
-
-    private boolean addWeaponInfo(Item item, Message tooltip) {
-        // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
-        String initialDamageInteraction = null;
-        Map<String, String> interactionVars = item.getInteractionVars();
-        for (String primaryInteractionVar : PRIMARY_INTERACTION_VARS) {
-            if (interactionVars.containsKey(primaryInteractionVar)) {
-                initialDamageInteraction = interactionVars.get(primaryInteractionVar);
-                break;
-            }
-        }
-        if (initialDamageInteraction == null) return false;
-
-        String interactionId = String.format("*%s_Interactions_0", initialDamageInteraction);
-
-        Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
-        if (interaction instanceof DamageEntityInteraction damageEntityInteraction) {
-            tooltip.insert("\n");
-            addTooltipCategory(tooltip, "Weapon");
-            try {
-                Field damageCalculatorField = DamageEntityInteraction.class.getDeclaredField("damageCalculator");
-                damageCalculatorField.setAccessible(true);
-                DamageCalculator damageCalculator = (DamageCalculator) damageCalculatorField.get(damageEntityInteraction);
-                Field baseDamageRawField = DamageCalculator.class.getDeclaredField("baseDamageRaw");
-                baseDamageRawField.setAccessible(true);
-                Object2FloatMap<String> baseDamageRaw = (Object2FloatMap<String>) baseDamageRawField.get(damageCalculator);
-
-                Field randomPercentageModifierField = DamageCalculator.class.getDeclaredField("randomPercentageModifier");
-                randomPercentageModifierField.setAccessible(true);
-                float randomPercentageModifier = randomPercentageModifierField.getFloat(damageCalculator);
-
-
-                baseDamageRaw.forEach((damageCause, damage) -> {
-                    String value;
-                    if (randomPercentageModifier > 0) {
-                        value = String.format("%.0f ±%.0f%%", damage, randomPercentageModifier * 100);
-                    } else {
-                        value = String.format("%.0f", damage);
-                    }
-                    addTooltipLine(tooltip, damageCause, value);
-                });
-
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                throw new RuntimeException(e);
-            }
-            return true;
-        } else {
-            return false;
-        }
-    }
-
-    private boolean addNpcLoot(Item item, Message tooltip) {
-        Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
-        if (itemDrops == null) return false;
-        tooltip.insert("\n");
-        addTooltipCategory(tooltip, "Mob Loot");
-        itemDrops.forEach((role, drop) -> {
-
-            int min = drop.getKey();
-            int max = drop.getValue();
-            String value = String.format("%d - %d", min, max);
-            if (Objects.equals(min, max)) {
-                value = String.valueOf(min);
-            }
-            addTooltipLine(tooltip, Message.translation(role), value);
-        });
-        return true;
-    }
-
-    private boolean addGeneral(Item item, Message tooltip) {
-        double maxDurability = item.getMaxDurability();
-        if (maxDurability <= 0) return false;
-        tooltip.insert("\n");
-        addTooltipCategory(tooltip, "General");
-        addTooltipLine(tooltip, "Durability", String.format("%.0f", maxDurability));
-        return true;
-    }
-
-    private void addTooltipCategory(Message tooltip, String category) {
-        tooltip.insert("\n").insert(Message.raw(category).bold(true).color(Color.GRAY));
-    }
-
-    private void addTooltipLine(Message tooltip, String label, String value) {
-        addTooltipLine(tooltip, Message.raw(label), value);
-    }
-
-    private void addTooltipLine(Message tooltip, Message label, String value) {
-        tooltip.insert("\n").insert(label.insert(": ").bold(true).color("#93844c")).insert(value);
     }
 
     public static class SearchGuiData {
