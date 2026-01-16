@@ -1,0 +1,18 @@
+Group {
+  Padding: (Left: 10);
+  LayoutMode: Top;
+  Label #Category {
+    Style: (
+      FontSize: 16,
+      RenderBold: true,
+      TextColor: #ffffff
+    );
+  }
+
+  Label #Description {
+    Style: (
+      FontSize: 14,
+      TextColor: #aaaaaa
+    );
+  }
+}

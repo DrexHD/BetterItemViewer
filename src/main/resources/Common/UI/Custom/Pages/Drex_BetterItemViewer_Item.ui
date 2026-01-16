@@ -17,14 +17,16 @@ Button {
     Visible: true;
   }
 
-  Label #ItemName {
-    Style: (
-      FontSize: 14,
-      RenderBold: true,
-      TextColor: #ffffff
-    );
-    Anchor: (Bottom: 5);
+  Group {
+    LayoutMode: Center;
+    Label #ItemName {
+      Style: (
+        FontSize: 12,
+        RenderBold: true,
+        TextColor: #ffffff
+      );
+      Anchor: (Bottom: 5);
+    }
   }
-
 
 }

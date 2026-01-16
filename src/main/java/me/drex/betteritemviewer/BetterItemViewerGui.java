@@ -30,11 +30,16 @@ import java.awt.*;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
+import java.util.concurrent.atomic.AtomicInteger;
+
+import static me.drex.betteritemviewer.BetterItemViewerGui.SearchGuiData.KEY_ITEM;
+import static me.drex.betteritemviewer.BetterItemViewerGui.SearchGuiData.KEY_SEARCH_QUERY;
 
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.SearchGuiData> {
 
     private String searchQuery;
-    private static final String[] PRIMARY_INTERACTION_VARS = new String[] {
+    private Item selectedItem;
+    private static final String[] PRIMARY_INTERACTION_VARS = new String[]{
         "Swing_Left_Damage",
         "Longsword_Swing_Left_Damage",
         "Swing_Down_Left_Damage",
@@ -52,15 +57,21 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder, @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
         uiCommandBuilder.set("#SearchInput.Value", this.searchQuery);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of("@SearchQuery", "#SearchInput.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
         this.buildList(ref, uiCommandBuilder, uiEventBuilder, store);
     }
+
+    // TODO fuel
 
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull SearchGuiData data) {
         super.handleDataEvent(ref, store, data);
         if (data.item != null) {
-            this.sendUpdate();
+            Main.ITEMS.stream().filter(item -> Objects.equals(item.getId(), data.item)).findFirst().ifPresent(item -> this.selectedItem = item);
+            UICommandBuilder commandBuilder = new UICommandBuilder();
+            UIEventBuilder eventBuilder = new UIEventBuilder();
+            this.buildList(ref, commandBuilder, eventBuilder, store);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
         if (data.searchQuery != null) {
             this.searchQuery = data.searchQuery.trim().toLowerCase();
@@ -92,45 +103,179 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             return name1.compareTo(name2);
         });
 
+        items = items.stream().limit(42).toList();
+
         this.buildButtons(items, playerComponent, commandBuilder, eventBuilder);
     }
 
     private void buildButtons(Collection<Item> items, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
-        commandBuilder.clear("#SubcommandCards");
-        commandBuilder.set("#SubcommandSection.Visible", true);
+        commandBuilder.clear("#ItemSection");
+        commandBuilder.clear("#ItemStats");
+
+        if (selectedItem != null) {
+            commandBuilder.set("#ItemTitle.Visible", true);
+            commandBuilder.set("#ItemTitle #ItemIcon.ItemId", selectedItem.getId());
+            commandBuilder.set("#ItemTitle #ItemName.TextSpans", Message.translation(selectedItem.getTranslationKey()));
+            commandBuilder.set("#ItemTitle #ItemId.TextSpans", Message.raw("ID: " + selectedItem.getId()));
+            addDescription(selectedItem, commandBuilder);
+            addWeaponInfo2(selectedItem, commandBuilder);
+            addToolInfo2(selectedItem, commandBuilder);
+            addNpcLoot2(selectedItem, commandBuilder);
+            addGeneral2(selectedItem, commandBuilder);
+
+            commandBuilder.set("#ItemStats.Visible", true);
+        }
+
         int rowIndex = 0;
         int cardsInCurrentRow = 0;
 
         for (Item item : items) {
-
-            var tooltip = Message.empty();
-            tooltip.insert(Message.translation(item.getTranslationKey()).bold(true));
-            boolean hasInfo = false;
-
-            hasInfo |= addToolInfo(item, tooltip);
-            hasInfo |= addWeaponInfo(item, tooltip);
-            hasInfo |= addNpcLoot(item, tooltip);
-            hasInfo |= addGeneral(item, tooltip);
-
-            if (!hasInfo) continue;
-
             if (cardsInCurrentRow == 0) {
-                commandBuilder.appendInline("#SubcommandCards", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
+                commandBuilder.appendInline("#ItemSection", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
             }
 
-            commandBuilder.append("#SubcommandCards[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_SearchItemIcon.ui");
+            commandBuilder.append("#ItemSection[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_Item.ui");
 
-            commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "].TooltipTextSpans", tooltip);
-            commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
-            commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemName.TextSpans", Message.translation(item.getTranslationKey()));
-            //commandBuilder.set("#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandUsage.TextSpans", this.getSimplifiedUsage(item, playerComponent));
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#SubcommandCards[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of("Item", item.getId()));
+            commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
+//            commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemId.TextSpans", Message.raw(item.getId()));
+            commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemName.TextSpans", Message.translation(item.getTranslationKey()));
+            //commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandUsage.TextSpans", this.getSimplifiedUsage(item, playerComponent));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of(KEY_ITEM, item.getId()));
             ++cardsInCurrentRow;
             if (cardsInCurrentRow >= 7) {
                 cardsInCurrentRow = 0;
                 ++rowIndex;
             }
         }
+    }
+
+    private void addDescription(Item item, UICommandBuilder commandBuilder) {
+        String description = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getDescriptionTranslationKey());
+        if (description == null) return;
+
+        int i = 0;
+        commandBuilder.appendInline("#ItemStats", "Group #Description {LayoutMode: Top;}");
+        commandBuilder.appendInline("#Description", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+        commandBuilder.set("#Description[" + i + "].TextSpans", Message.raw("Description"));
+        i++;
+
+        commandBuilder.appendInline("#Description", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+        commandBuilder.set("#Description[" + i + "].TextSpans", Message.translation(item.getDescriptionTranslationKey()));
+        i++;
+    }
+
+    private void addToolInfo2(Item item, UICommandBuilder commandBuilder) {
+        ItemTool tool = item.getTool();
+        if (tool == null) return;
+        ItemToolSpec[] specs = tool.getSpecs();
+        if (specs == null) return;
+
+        int i = 0;
+        commandBuilder.appendInline("#ItemStats", "Group #Tools {LayoutMode: Top;}");
+        commandBuilder.appendInline("#Tools", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+        commandBuilder.set("#Tools[" + i + "].TextSpans", Message.raw("Breaking Speed"));
+        i++;
+
+        for (ItemToolSpec spec : specs) {
+            commandBuilder.appendInline("#Tools", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+            commandBuilder.set("#Tools[" + i + "].TextSpans", Message.raw(spec.getGatherType() + ": " + String.format("%.2f", spec.getPower())));
+            i++;
+        }
+    }
+
+    private void addWeaponInfo2(Item item, UICommandBuilder commandBuilder) {
+        // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
+        String initialDamageInteraction = null;
+        Map<String, String> interactionVars = item.getInteractionVars();
+        for (String primaryInteractionVar : PRIMARY_INTERACTION_VARS) {
+            if (interactionVars.containsKey(primaryInteractionVar)) {
+                initialDamageInteraction = interactionVars.get(primaryInteractionVar);
+                break;
+            }
+        }
+        if (initialDamageInteraction == null) return;
+
+        String interactionId = String.format("*%s_Interactions_0", initialDamageInteraction);
+
+        Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
+        if (interaction instanceof DamageEntityInteraction damageEntityInteraction) {
+            AtomicInteger i = new AtomicInteger();
+            commandBuilder.appendInline("#ItemStats", "Group #Weapons {LayoutMode: Top;}");
+            commandBuilder.appendInline("#Weapons", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+            commandBuilder.set("#Weapons[" + i + "].TextSpans", Message.raw("Weapon"));
+
+            i.getAndIncrement();
+            try {
+                Field damageCalculatorField = DamageEntityInteraction.class.getDeclaredField("damageCalculator");
+                damageCalculatorField.setAccessible(true);
+                DamageCalculator damageCalculator = (DamageCalculator) damageCalculatorField.get(damageEntityInteraction);
+                Field baseDamageRawField = DamageCalculator.class.getDeclaredField("baseDamageRaw");
+                baseDamageRawField.setAccessible(true);
+                Object2FloatMap<String> baseDamageRaw = (Object2FloatMap<String>) baseDamageRawField.get(damageCalculator);
+
+                Field randomPercentageModifierField = DamageCalculator.class.getDeclaredField("randomPercentageModifier");
+                randomPercentageModifierField.setAccessible(true);
+                float randomPercentageModifier = randomPercentageModifierField.getFloat(damageCalculator);
+
+
+                baseDamageRaw.forEach((damageCause, damage) -> {
+                    String value;
+                    if (randomPercentageModifier > 0) {
+                        value = String.format("%.0f ±%.0f%%", damage, randomPercentageModifier * 100);
+                    } else {
+                        value = String.format("%.0f", damage);
+                    }
+                    commandBuilder.appendInline("#Weapons", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+                    commandBuilder.set("#Weapons[" + i + "].TextSpans", Message.raw(damageCause + ": " + value));
+                    i.getAndIncrement();
+                });
+
+            } catch (NoSuchFieldException | IllegalAccessException e) {
+                throw new RuntimeException(e);
+            }
+        }
+
+    }
+
+    private boolean addNpcLoot2(Item item, UICommandBuilder commandBuilder) {
+        Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
+        if (itemDrops == null) return false;
+        AtomicInteger i = new AtomicInteger();
+        commandBuilder.appendInline("#ItemStats", "Group #Loot {LayoutMode: Top;}");
+        commandBuilder.appendInline("#Loot", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+        commandBuilder.set("#Loot[" + i + "].TextSpans", Message.raw("Mob Loot"));
+        i.getAndIncrement();
+
+        itemDrops.forEach((role, drop) -> {
+
+            int min = drop.getKey();
+            int max = drop.getValue();
+            String value = String.format("%d - %d", min, max);
+            if (Objects.equals(min, max)) {
+                value = String.valueOf(min);
+            }
+            commandBuilder.appendInline("#Loot", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+            commandBuilder.set("#Loot[" + i + "].TextSpans", Message.translation(role).insert(": " + value));
+            i.getAndIncrement();
+        });
+        return true;
+    }
+
+    private void addGeneral2(Item item, UICommandBuilder commandBuilder) {
+        double maxDurability = item.getMaxDurability();
+        int i = 0;
+        commandBuilder.appendInline("#ItemStats", "Group #General {LayoutMode: Top;}");
+        commandBuilder.appendInline("#General", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+        commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("General"));
+        i++;
+
+        commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+        commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Durability: " + String.format("%.0f", maxDurability)));
+        i++;
+
+        commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+        commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Max Stack: " + item.getMaxStack()));
+        i++;
     }
 
     private boolean addToolInfo(Item item, Message tooltip) {
@@ -176,7 +321,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 Field randomPercentageModifierField = DamageCalculator.class.getDeclaredField("randomPercentageModifier");
                 randomPercentageModifierField.setAccessible(true);
                 float randomPercentageModifier = randomPercentageModifierField.getFloat(damageCalculator);
-
 
 
                 baseDamageRaw.forEach((damageCause, damage) -> {
