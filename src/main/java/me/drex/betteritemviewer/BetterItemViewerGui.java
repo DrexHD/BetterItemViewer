@@ -3,7 +3,6 @@ package me.drex.betteritemviewer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
-import com.hypixel.hytale.component.ComponentAccessor;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
@@ -12,7 +11,6 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemTool;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemToolSpec;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
@@ -55,10 +53,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder, @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
+        long start = System.currentTimeMillis();
+        System.out.println(start + " Building BetterItemViewerGui");
         uiCommandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
         uiCommandBuilder.set("#SearchInput.Value", this.searchQuery);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
-        this.buildList(ref, uiCommandBuilder, uiEventBuilder, store);
+        this.buildList(uiCommandBuilder, uiEventBuilder);
+        this.buildStats(uiCommandBuilder, uiEventBuilder);
+        System.out.println(System.currentTimeMillis() - start + "ms finishing BetterItemViewerGui");
     }
 
     // TODO fuel
@@ -66,65 +68,73 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull SearchGuiData data) {
         super.handleDataEvent(ref, store, data);
+        UICommandBuilder commandBuilder = new UICommandBuilder();
+        UIEventBuilder eventBuilder = new UIEventBuilder();
         if (data.item != null) {
             Main.ITEMS.stream().filter(item -> Objects.equals(item.getId(), data.item)).findFirst().ifPresent(item -> this.selectedItem = item);
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            UIEventBuilder eventBuilder = new UIEventBuilder();
-            this.buildList(ref, commandBuilder, eventBuilder, store);
+            this.buildStats(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
         if (data.searchQuery != null) {
             this.searchQuery = data.searchQuery.trim().toLowerCase();
-            UICommandBuilder commandBuilder = new UICommandBuilder();
-            UIEventBuilder eventBuilder = new UIEventBuilder();
-            this.buildList(ref, commandBuilder, eventBuilder, store);
+            this.buildList(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
     }
 
-    private void buildList(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull ComponentAccessor<EntityStore> componentAccessor) {
+    private void buildStats(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+        this.updateStats(this.selectedItem, commandBuilder, eventBuilder);
+    }
+
+    private void buildList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         List<Item> items = new LinkedList<>(Main.ITEMS);
-        Player playerComponent = componentAccessor.getComponent(ref, Player.getComponentType());
 
-        assert playerComponent != null;
+        items.removeIf(item -> {
+            if (item.getId().equals("Unknown")) return true;
+            var itemName = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
 
-        if (!this.searchQuery.isEmpty()) {
-            items.removeIf(item -> {
-                var itemName = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
-                if (itemName == null) return true;
+            if (!this.searchQuery.isEmpty()) {
+                boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(searchQuery) ||
+                    item.getTranslationKey().toLowerCase().contains(searchQuery);
+                if (itemName != null && itemName.toLowerCase().contains(searchQuery)) {
+                    matchesQuery = true;
+                }
+                return !matchesQuery;
+            }
 
-                return !itemName.toLowerCase().contains(searchQuery);
-            });
-        }
+            return false;
+        });
 
         items.sort((item1, item2) -> {
-            String name1 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item1.getTranslationKey()), "");
-            String name2 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item2.getTranslationKey()), "");
+            String name1 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item1.getTranslationKey()), item1.getTranslationKey());
+            String name2 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item2.getTranslationKey()), item2.getTranslationKey());
             return name1.compareTo(name2);
         });
 
-        items = items.stream().limit(42).toList();
+        if (selectedItem == null && !items.isEmpty()) {
+            selectedItem = items.getFirst();
+        }
 
-        this.buildButtons(items, playerComponent, commandBuilder, eventBuilder);
+        this.updateItemList(items, commandBuilder, eventBuilder);
     }
 
-    private void buildButtons(Collection<Item> items, @Nonnull Player playerComponent, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
-        commandBuilder.clear("#ItemSection");
+    private void updateStats(Item selectedItem, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ItemStats");
+        commandBuilder.set("#ItemTitle.Visible", true);
+        commandBuilder.set("#ItemTitle #ItemIcon.ItemId", selectedItem.getId());
+        commandBuilder.set("#ItemTitle #ItemName.TextSpans", Message.translation(selectedItem.getTranslationKey()));
+        commandBuilder.set("#ItemTitle #ItemId.TextSpans", Message.raw("ID: " + selectedItem.getId()));
+        addDescription(selectedItem, commandBuilder);
+        addGeneral(selectedItem, commandBuilder);
+        addWeaponInfo(selectedItem, commandBuilder);
+        addToolInfo(selectedItem, commandBuilder);
+        addNpcLoot(selectedItem, commandBuilder);
 
-        if (selectedItem != null) {
-            commandBuilder.set("#ItemTitle.Visible", true);
-            commandBuilder.set("#ItemTitle #ItemIcon.ItemId", selectedItem.getId());
-            commandBuilder.set("#ItemTitle #ItemName.TextSpans", Message.translation(selectedItem.getTranslationKey()));
-            commandBuilder.set("#ItemTitle #ItemId.TextSpans", Message.raw("ID: " + selectedItem.getId()));
-            addDescription(selectedItem, commandBuilder);
-            addWeaponInfo2(selectedItem, commandBuilder);
-            addToolInfo2(selectedItem, commandBuilder);
-            addNpcLoot2(selectedItem, commandBuilder);
-            addGeneral2(selectedItem, commandBuilder);
+        commandBuilder.set("#ItemStats.Visible", true);
+    }
 
-            commandBuilder.set("#ItemStats.Visible", true);
-        }
+    private void updateItemList(Collection<Item> items, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#ItemSection");
 
         int rowIndex = 0;
         int cardsInCurrentRow = 0;
@@ -137,9 +147,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.append("#ItemSection[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_Item.ui");
 
             commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
-//            commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemId.TextSpans", Message.raw(item.getId()));
             commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemName.TextSpans", Message.translation(item.getTranslationKey()));
-            //commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #SubcommandUsage.TextSpans", this.getSimplifiedUsage(item, playerComponent));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of(KEY_ITEM, item.getId()));
             ++cardsInCurrentRow;
             if (cardsInCurrentRow >= 7) {
@@ -164,7 +172,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i++;
     }
 
-    private void addToolInfo2(Item item, UICommandBuilder commandBuilder) {
+    private void addToolInfo(Item item, UICommandBuilder commandBuilder) {
         ItemTool tool = item.getTool();
         if (tool == null) return;
         ItemToolSpec[] specs = tool.getSpecs();
@@ -183,7 +191,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
     }
 
-    private void addWeaponInfo2(Item item, UICommandBuilder commandBuilder) {
+    private void addWeaponInfo(Item item, UICommandBuilder commandBuilder) {
         // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
         String initialDamageInteraction = null;
         Map<String, String> interactionVars = item.getInteractionVars();
@@ -237,7 +245,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     }
 
-    private boolean addNpcLoot2(Item item, UICommandBuilder commandBuilder) {
+    private boolean addNpcLoot(Item item, UICommandBuilder commandBuilder) {
         Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
         if (itemDrops == null) return false;
         AtomicInteger i = new AtomicInteger();
@@ -261,7 +269,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         return true;
     }
 
-    private void addGeneral2(Item item, UICommandBuilder commandBuilder) {
+    private void addGeneral(Item item, UICommandBuilder commandBuilder) {
         double maxDurability = item.getMaxDurability();
         int i = 0;
         commandBuilder.appendInline("#ItemStats", "Group #General {LayoutMode: Top;}");
@@ -269,9 +277,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("General"));
         i++;
 
-        commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-        commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Durability: " + String.format("%.0f", maxDurability)));
-        i++;
+        if (maxDurability > 0) {
+            commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+            commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Durability: " + String.format("%.0f", maxDurability)));
+            i++;
+        }
 
         commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
         commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Max Stack: " + item.getMaxStack()));

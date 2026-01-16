@@ -18,20 +18,16 @@ $C.@PageOverlay {
     #Content {
       LayoutMode: Left;
 
-      Group #ItemList {
+      Group #ItemSection {
+        FlexWeight: 1;
+        Anchor: (Bottom: 10);
         LayoutMode: TopScrolling;
-        Padding: (Left: 10);
-        ScrollbarStyle: $C.@DefaultScrollbarStyle;
-
-        Group #ItemSection {
-          Anchor: (Bottom: 10);
-          LayoutMode: Top;
-          Visible: true;
-        }
+        Visible: true;
       }
 
       Group {
         LayoutMode: Top;
+        Anchor: (Width: 600);
 
         Padding: (Left: 10);
         Group #ItemInfo {
@@ -73,7 +69,6 @@ $C.@PageOverlay {
           Group #ItemStats {
             Visible: false;
             LayoutMode: Top;
-            Anchor: (Width: 500);
             Background: (Color: #1a1a1a(0.6));
             Padding: (Full: 10);
           }
