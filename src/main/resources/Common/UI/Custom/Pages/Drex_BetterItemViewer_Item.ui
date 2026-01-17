@@ -1,34 +1,34 @@
-$C = "../Common.ui";
+AssetImage {
+  Anchor: (Bottom: 10, Right: 10);
 
-Button {
-  Anchor: (Width: 131, Bottom: 10, Right: 10);
-  Padding: (Full: 12);
-  Background: (Color: #1a1a1a(0.6));
-  LayoutMode: Top;
-  Style: (
-    Hovered: (
-      Background: #2a2a2a(0.8),
-    ),
-    Pressed: (
-      Background: #3a3a3a(0.9),
-    )
-  );
+  Button #ItemButton {
+    Anchor: (Width: 131);
+    Padding: (Full: 12);
 
-  ItemIcon #ItemIcon {
-    Anchor: (Width: 64, Height: 64, Bottom: 5);
-    Visible: true;
-  }
+    LayoutMode: Top;
+    Style: (
+      Hovered: (
+        Background: #2a2a2a(0.8),
+      ),
+      Pressed: (
+        Background: #3a3a3a(0.9),
+      )
+    );
 
-  Group {
-    LayoutMode: Center;
-    Label #ItemName {
-      Style: (
-        FontSize: 12,
-        RenderBold: true,
-        TextColor: #ffffff
-      );
-      Anchor: (Bottom: 5);
+    ItemIcon #ItemIcon {
+      Anchor: (Width: 64, Height: 64, Bottom: 5);
+      Visible: true;
+    }
+
+    Group {
+      LayoutMode: Center;
+      Label #ItemName {
+        Style: (
+          FontSize: 12,
+          RenderBold: true,
+          TextColor: #ffffff
+        );
+      }
     }
   }
-
 }

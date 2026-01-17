@@ -168,16 +168,16 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
             commandBuilder.append("#ItemSection[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_Item.ui");
 
-//            int qualityIndex = item.getQualityIndex();
-//            ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
-//            if (quality != null) {
-//                String slotTexture = quality.getSlotTexture();
-//                commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "].Background.TexturePath", slotTexture);
-//            }
+            int qualityIndex = item.getQualityIndex();
+            ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+            if (quality != null) {
+                String slotTexture = quality.getSlotTexture();
+                commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "].AssetPath", slotTexture);
+            }
 
             commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
             commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemName.TextSpans", Message.translation(item.getTranslationKey()));
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "]", EventData.of(KEY_ITEM, item.getId()));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_ITEM, item.getId()));
             ++cardsInCurrentRow;
             if (cardsInCurrentRow >= 7) {
                 cardsInCurrentRow = 0;
