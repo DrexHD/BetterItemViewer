@@ -333,24 +333,27 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
 
         CraftingRecipe recipe = craftingRecipes.get(currentPage);
-        for (BenchRequirement benchRequirement : recipe.getBenchRequirement()) {
-            for (Item benchItem : Item.getAssetMap().getAssetMap().values()) {
-                String blockId = benchItem.getBlockId();
-                BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
-                if (blockType == null || blockType.getBench() == null) continue;
-                String id = blockType.getBench().getId();
-                if (Objects.equals(id, benchRequirement.id)) {
-                    commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_BenchEntry.ui");
-                    commandBuilder.set(tag + "[" + i + "] #ItemIcon.ItemId", benchItem.getId());
-                    Message requirementText = Message.translation(benchItem.getTranslationKey());
-                    if (benchRequirement.requiredTierLevel > 0) {
-                        requirementText.insert(" (Tier " + benchRequirement.requiredTierLevel + ")");
+        BenchRequirement[] benchRequirements = recipe.getBenchRequirement();
+        if (benchRequirements != null && benchRequirements.length > 0) {
+            for (BenchRequirement benchRequirement : recipe.getBenchRequirement()) {
+                for (Item benchItem : Item.getAssetMap().getAssetMap().values()) {
+                    String blockId = benchItem.getBlockId();
+                    BlockType blockType = BlockType.getAssetMap().getAsset(blockId);
+                    if (blockType == null || blockType.getBench() == null) continue;
+                    String id = blockType.getBench().getId();
+                    if (Objects.equals(id, benchRequirement.id)) {
+                        commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_BenchEntry.ui");
+                        commandBuilder.set(tag + "[" + i + "] #ItemIcon.ItemId", benchItem.getId());
+                        Message requirementText = Message.translation(benchItem.getTranslationKey());
+                        if (benchRequirement.requiredTierLevel > 0) {
+                            requirementText.insert(" (Tier " + benchRequirement.requiredTierLevel + ")");
+                        }
+
+                        commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", requirementText);
+                        i.getAndIncrement();
+
+                        break;
                     }
-
-                    commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", requirementText);
-                    i.getAndIncrement();
-
-                    break;
                 }
             }
         }
