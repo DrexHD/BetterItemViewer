@@ -7,11 +7,16 @@ $C.@PageOverlay {
 
     #Title {
       Group {
+        LayoutMode: Left;
+
         $C.@Title {
           @Text = "Better Item Viewer";
         }
 
         $C.@HeaderSearch {}
+
+        $C.@DropdownBox #ModFilter {
+        }
       }
     }
 

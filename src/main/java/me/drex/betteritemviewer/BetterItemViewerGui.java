@@ -1,14 +1,17 @@
 package me.drex.betteritemviewer;
 
+import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
+import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.*;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
@@ -17,12 +20,16 @@ import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
+import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
+import com.hypixel.hytale.server.core.ui.LocalizableString;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
+import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import javax.annotation.Nonnull;
 import java.lang.reflect.Field;
@@ -36,6 +43,7 @@ import static me.drex.betteritemviewer.BetterItemViewerGui.GuiData.*;
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.GuiData> {
 
     private String searchQuery;
+    private String modFilter = "";
     private Item selectedItem;
     private int selectedPage = 0;
     private int selectedRecipeInPage = 0;
@@ -111,6 +119,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             this.buildList(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
+
+        if (data.modFilter != null) {
+            this.modFilter = data.modFilter;
+            this.buildList(commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
     }
 
     private void buildStats(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
@@ -119,6 +133,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     private void buildList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         List<Item> items = new LinkedList<>(Main.ITEMS);
+        Set<String> modItems = Item.getAssetMap().getKeysForPack(modFilter);
 
         items.removeIf(item -> {
             if (item.getId().equals("Unknown")) return true;
@@ -129,6 +144,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             if (quality.isHiddenFromSearch()) {
                 return true;
             }
+
+            if (!modFilter.isEmpty()) {
+                if (!modItems.contains(item.getId())) {
+                    return true;
+                }
+            }
+
 
             if (!this.searchQuery.isEmpty()) {
                 boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(searchQuery) ||
@@ -152,7 +174,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             selectedItem = items.getFirst();
         }
 
-
         int entriesPerPage = 6 * 7;
 
         int size = items.size();
@@ -174,6 +195,24 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.set("#ListSection #PaginationControls.Visible", false);
         }
 
+        ObjectArrayList<DropdownEntryInfo> mods = new ObjectArrayList<>();
+        mods.add(new DropdownEntryInfo(LocalizableString.fromString("All Mods"), ""));
+
+        for (PluginManifest plugin : PluginManager.get().getAvailablePlugins().values()) {
+            Set<String> keysForPack = Item.getAssetMap().getKeysForPack(plugin.getName());
+            if (keysForPack == null || keysForPack.isEmpty()) continue;
+            mods.add(new DropdownEntryInfo(LocalizableString.fromString(plugin.getName()), plugin.getName()));
+        }
+
+        for (AssetPack assetPack : AssetModule.get().getAssetPacks()) {
+            Set<String> keysForPack = Item.getAssetMap().getKeysForPack(assetPack.getName());
+            if (keysForPack == null || keysForPack.isEmpty()) continue;
+            mods.add(new DropdownEntryInfo(LocalizableString.fromString(assetPack.getName()), assetPack.getName()));
+        }
+
+        commandBuilder.set("#ModFilter.Entries", mods);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ModFilter", EventData.of(KEY_MOD_FILTER, "#ModFilter.Value"));
 
         this.updateItemList(items, commandBuilder, eventBuilder);
     }
@@ -462,12 +501,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     public static class GuiData {
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
+        static final String KEY_MOD_FILTER = "@ModFilter";
         static final String KEY_ITEM = "Item";
         static final String KEY_LIST_PAGE = "ListPage";
         static final String KEY_RECIPE_IN_PAGE = "RecipeInPage";
         static final String KEY_RECIPE_OUT_PAGE = "RecipeOutPage";
         public static final BuilderCodec<GuiData> CODEC = BuilderCodec.builder(GuiData.class, GuiData::new)
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
+            .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.item = s, guiData -> guiData.item)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_IN_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeInPage = s, guiData -> guiData.recipeInPage)
@@ -476,6 +517,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         private String item;
         private String searchQuery;
+        private String modFilter;
         private String listPage;
         private String recipeInPage;
         private String recipeOutPage;
