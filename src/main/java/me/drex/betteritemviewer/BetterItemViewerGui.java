@@ -37,6 +37,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     private String searchQuery;
     private Item selectedItem;
+    private int selectedPage = 0;
     private int selectedRecipeInPage = 0;
     private int selectedRecipeOutPage = 0;
     private static final String[] PRIMARY_INTERACTION_VARS = new String[]{
@@ -77,7 +78,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.recipeInPage != null) {
             try {
-                this.selectedRecipeInPage = Integer.parseInt(data.recipeInPage);
+                this.selectedRecipeInPage += Integer.parseInt(data.recipeInPage);
             } catch (NumberFormatException e) {
                 this.selectedRecipeInPage = 0;
             }
@@ -87,11 +88,21 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.recipeOutPage != null) {
             try {
-                this.selectedRecipeOutPage = Integer.parseInt(data.recipeOutPage);
+                this.selectedRecipeOutPage += Integer.parseInt(data.recipeOutPage);
             } catch (NumberFormatException e) {
                 this.selectedRecipeOutPage = 0;
             }
             this.buildStats(commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.listPage != null) {
+            try {
+                this.selectedPage += Integer.parseInt(data.listPage);
+            } catch (NumberFormatException e) {
+                this.selectedPage = 0;
+            }
+            this.buildList(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
@@ -134,6 +145,29 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (selectedItem == null && !items.isEmpty()) {
             selectedItem = items.getFirst();
         }
+
+
+        int entriesPerPage = 6 * 7;
+
+        int size = items.size();
+        int pages = Math.ceilDiv(size, entriesPerPage);
+        if (selectedPage >= pages) {
+            selectedPage = 0;
+        } else if (selectedPage < 0) {
+            selectedPage = pages - 1;
+        }
+
+        items = items.stream().skip((long) selectedPage * entriesPerPage).limit(entriesPerPage).toList();
+
+        if (pages > 1) {
+            commandBuilder.set("#ListSection #PaginationControls.Visible", true);
+            commandBuilder.set("#ListSection #PaginationInfo.Text", (selectedPage + 1) + " / " + pages);
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #PrevPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(-1)));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #NextPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(+1)));
+        } else {
+            commandBuilder.set("#ListSection #PaginationControls.Visible", false);
+        }
+
 
         this.updateItemList(items, commandBuilder, eventBuilder);
     }
@@ -326,8 +360,8 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (craftingRecipes.size() > 1) {
             commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RecipePagination.ui");
             commandBuilder.set(tag + "[" + i + "] #PaginationInfo.Text", (currentPage + 1) + " / " + craftingRecipes.size());
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #PrevPageButton", EventData.of(eventKey, String.valueOf(currentPage - 1)));
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #NextPageButton", EventData.of(eventKey, String.valueOf(currentPage + 1)));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #PrevPageButton", EventData.of(eventKey, String.valueOf(-1)));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #NextPageButton", EventData.of(eventKey, String.valueOf(+1)));
 
             i.getAndIncrement();
         }
@@ -423,17 +457,20 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     public static class GuiData {
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
         static final String KEY_ITEM = "Item";
+        static final String KEY_LIST_PAGE = "ListPage";
         static final String KEY_RECIPE_IN_PAGE = "RecipeInPage";
         static final String KEY_RECIPE_OUT_PAGE = "RecipeOutPage";
         public static final BuilderCodec<GuiData> CODEC = BuilderCodec.builder(GuiData.class, GuiData::new)
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.item = s, guiData -> guiData.item)
+            .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_IN_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeInPage = s, guiData -> guiData.recipeInPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_OUT_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeOutPage = s, guiData -> guiData.recipeOutPage)
             .build();
 
         private String item;
         private String searchQuery;
+        private String listPage;
         private String recipeInPage;
         private String recipeOutPage;
 
