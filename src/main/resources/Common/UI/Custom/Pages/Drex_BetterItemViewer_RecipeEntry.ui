@@ -1,0 +1,31 @@
+Group {
+  Padding: (Full: 4);
+  Background: (Color: #252525(0.5));
+
+  Group {
+    LayoutMode: Left;
+    Background: (Color: #252525(0.5));
+
+    AssetImage #ResourceIcon {
+      Visible: false;
+      Anchor: (Width: 48, Height: 48);
+    }
+
+    ItemIcon #ItemIcon {
+      Visible: false;
+      Anchor: (Width: 48, Height: 48);
+    }
+
+    Group {
+      Padding: (Left: 4);
+      Label #ItemName {
+        Style: (
+          Alignment: Center,
+          FontSize: 20,
+          TextColor: #aaaaaa,
+          RenderBold: true
+        );
+      }
+    }
+  }
+}

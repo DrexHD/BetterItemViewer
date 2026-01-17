@@ -22,6 +22,8 @@ $C.@PageOverlay {
         FlexWeight: 1;
         Anchor: (Bottom: 10);
         LayoutMode: TopScrolling;
+        ScrollbarStyle: (...$C.@DefaultScrollbarStyle, Size: 12);
+
         Visible: true;
       }
 

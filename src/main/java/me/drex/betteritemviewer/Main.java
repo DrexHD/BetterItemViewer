@@ -5,10 +5,12 @@ import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDrop;
 import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
+import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -30,8 +32,12 @@ import java.util.logging.Level;
 
 public class Main extends JavaPlugin {
 
+    // TODO Update when assets change
     public static Collection<Item> ITEMS = Collections.emptyList();
-    public static Map<String, Map<String, Map.Entry<Integer, Integer>>> MOB_LOOT = new HashMap<>();
+    public static final Map<String, Map<String, Map.Entry<Integer, Integer>>> MOB_LOOT = new HashMap<>();
+    public static final Map<String, List<CraftingRecipe>> RECIPES_BY_INPUT = new HashMap<>();
+    public static final Map<String, List<CraftingRecipe>> RECIPES_BY_OUTPUT = new HashMap<>();
+
     private static boolean discoveredMobLoot = false;
 
     public Main(@Nonnull JavaPluginInit init) {
@@ -43,7 +49,25 @@ public class Main extends JavaPlugin {
         super.setup();
         this.getCommandRegistry().registerCommand(new BetterItemViewerCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemAssetLoad);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, Main::onRecipeLoad);
         this.getEventRegistry().registerGlobal(StartWorldEvent.class, Main::onStartWorld);
+    }
+
+    private static void onRecipeLoad(LoadedAssetsEvent<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> event) {
+        for (CraftingRecipe craftingRecipe : event.getLoadedAssets().values()) {
+            for (MaterialQuantity output : craftingRecipe.getOutputs()) {
+                List<CraftingRecipe> craftingRecipes = RECIPES_BY_INPUT.computeIfAbsent(output.getItemId(), _ -> new ArrayList<>());
+                craftingRecipes.add(craftingRecipe);
+            }
+            for (MaterialQuantity input : craftingRecipe.getInput()) {
+                List<CraftingRecipe> craftingRecipes = RECIPES_BY_OUTPUT.computeIfAbsent(input.getItemId(), _ -> new ArrayList<>());
+                craftingRecipes.add(craftingRecipe);
+            }
+        }
+    }
+
+    private static void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
+        ITEMS = event.getAssetMap().getAssetMap().values();
     }
 
     private static void onStartWorld(StartWorldEvent event) {
@@ -95,10 +119,6 @@ public class Main extends JavaPlugin {
 
             npcComponent.remove();
         }
-    }
-
-    private static void onItemAssetLoad(LoadedAssetsEvent<String, Item, DefaultAssetMap<String, Item>> event) {
-        ITEMS = event.getAssetMap().getAssetMap().values();
     }
 
 }

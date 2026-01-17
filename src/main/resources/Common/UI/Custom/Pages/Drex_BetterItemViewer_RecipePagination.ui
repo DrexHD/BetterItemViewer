@@ -1,0 +1,35 @@
+$C = "../Common.ui";
+
+Group #PaginationControls {
+  LayoutMode: Left;
+  Padding: (Top: 10, Bottom: 10);
+  Anchor: (Height: 40);
+
+  TextButton #PrevPageButton {
+    Anchor: (Width: 200, Height: 24);
+    Text: "Prev";
+    Style: $C.@SecondaryTextButtonStyle;
+    Background: #1a1a1a(0.6);
+    Padding: (Full: 8);
+  }
+
+  Label #PaginationInfo {
+    FlexWeight: 1;
+    Style: (
+      FontSize: 18,
+      TextColor: #aaaaaa,
+      Alignment: Center,
+      RenderBold: true
+    );
+    Background: #1a1a1a(0.5);
+    Padding: (Full: 8);
+  }
+
+  TextButton #NextPageButton {
+    Anchor: (Width: 200, Height: 24);
+    Text: "Next";
+    Style: $C.@SecondaryTextButtonStyle;
+    Background: #1a1a1a(0.6);
+    Padding: (Full: 8);
+  }
+}

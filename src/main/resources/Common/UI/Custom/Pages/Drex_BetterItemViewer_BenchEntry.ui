@@ -1,0 +1,24 @@
+Group {
+  Padding: (Full: 4);
+  Background: (Color: #252525(0.2));
+
+  Group {
+    LayoutMode: Left;
+
+    ItemIcon #ItemIcon {
+      Anchor: (Width: 48, Height: 48);
+    }
+
+    Group {
+      Padding: (Left: 4);
+      Label #ItemName {
+        Style: (
+          Alignment: Center,
+          FontSize: 20,
+          TextColor: #aaaaaa,
+          RenderBold: true
+        );
+      }
+    }
+  }
+}
