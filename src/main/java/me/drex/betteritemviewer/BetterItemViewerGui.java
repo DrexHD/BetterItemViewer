@@ -124,6 +124,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             if (item.getId().equals("Unknown")) return true;
             var itemName = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getTranslationKey());
 
+            int qualityIndex = item.getQualityIndex();
+            ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+            if (quality.isHiddenFromSearch()) {
+                return true;
+            }
+
             if (!this.searchQuery.isEmpty()) {
                 boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(searchQuery) ||
                     item.getId().toLowerCase().contains(searchQuery);
