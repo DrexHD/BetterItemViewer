@@ -51,6 +51,7 @@ public class Main extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, Main::onRecipeLoad);
         this.getEventRegistry().registerGlobal(StartWorldEvent.class, Main::onStartWorld);
+        this.getEntityStoreRegistry().registerSystem(new CheckKeybindSystem());
     }
 
     private static void onRecipeLoad(LoadedAssetsEvent<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> event) {

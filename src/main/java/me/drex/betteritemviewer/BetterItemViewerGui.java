@@ -100,7 +100,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     // TODO fuel
-
+    // TODO show which mod added an item
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull GuiData data) {
         super.handleDataEvent(ref, store, data);
@@ -432,7 +432,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     private void addRecipes(Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         addRecipes(item, commandBuilder, eventBuilder, "Recipes", "#Recipes", Main.RECIPES_BY_INPUT, selectedRecipeInPage, currentPage -> selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
-        addRecipes(item, commandBuilder, eventBuilder, "Used In", "#UsedIn", Main.RECIPES_BY_OUTPUT, selectedRecipeOutPage, currentPage -> selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
+        addRecipes(item, commandBuilder, eventBuilder, "Usages", "#UsedIn", Main.RECIPES_BY_OUTPUT, selectedRecipeOutPage, currentPage -> selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
     }
 
     private void addRecipes(

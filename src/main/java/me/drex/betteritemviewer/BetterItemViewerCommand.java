@@ -28,7 +28,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
 
     protected BetterItemViewerCommand() {
         super("betteritemviewer", "Displays tools, weapons and other items and shows detailed information, like tool stats or weapon damage.", false);
-        this.addAliases("biv");
+        this.addAliases("biv", "jei");
         var arg = new SingleArgumentType<String>("Default Search", "Opens the screen with this text in the search field", "sword", "pickaxe") {
             @NullableDecl
             @Override
