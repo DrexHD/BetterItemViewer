@@ -55,6 +55,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
                     if (playerRefComponent == null) return;
                     BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                     if (context.get(this.argument) != null) {
+                        // TODO clear state
                         settings.searchQuery = context.get(this.argument);
                     }
                     player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings));

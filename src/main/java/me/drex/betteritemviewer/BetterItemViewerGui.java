@@ -82,8 +82,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, BetterItemViewerComponent component) {
         super(playerRef, lifetime, GuiData.CODEC);
-        // TODO
-//        this.searchQuery = defaultSearchQuery.toLowerCase();
         this.component = component;
     }
 
@@ -92,8 +90,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         uiCommandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
         uiCommandBuilder.set("#SearchInput.Value", component.searchQuery);
         uiCommandBuilder.set("#ModFilter.Value", component.modFilter);
+        uiCommandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
         uiCommandBuilder.set("#SortMode.Value", component.sortMode);
+        uiCommandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
+        uiCommandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
+        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
         this.buildList(component, uiCommandBuilder, uiEventBuilder);
         this.updateStats(component, uiCommandBuilder, uiEventBuilder);
     }
@@ -172,9 +175,27 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
+        if (data.categoryFilter != null) {
+            settings.categoryFilter = data.categoryFilter;
+            settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
         if (data.sortMode != null) {
             settings.sortMode = data.sortMode;
             settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.altKeybind != null) {
+            settings.altKeybind = data.altKeybind;
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.showHiddenItems != null) {
+            settings.showHiddenItems = data.showHiddenItems;
             this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
@@ -190,12 +211,28 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
             int qualityIndex = item.getQualityIndex();
             ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
-            if (quality.isHiddenFromSearch()) {
+
+            if (quality != null && (quality.isHiddenFromSearch() || quality.getId().equals("Developer")) && !settings.showHiddenItems) {
                 return true;
             }
 
             if (!settings.modFilter.isEmpty()) {
                 if (!modItems.contains(item.getId())) {
+                    return true;
+                }
+            }
+
+            if (!settings.categoryFilter.isEmpty()) {
+                if (item.getCategories() == null) return true;
+
+                boolean matchesCategory = false;
+                for (String category : item.getCategories()) {
+                    if (category.startsWith(settings.categoryFilter)) {
+                        matchesCategory = true;
+                        break;
+                    }
+                }
+                if (!matchesCategory) {
                     return true;
                 }
             }
@@ -262,8 +299,24 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         COMPARATORS.forEach((name, _) -> sortModes.add(new DropdownEntryInfo(LocalizableString.fromString(name), name)));
         commandBuilder.set("#SortMode.Entries", sortModes);
 
+        ObjectArrayList<DropdownEntryInfo> categories = new ObjectArrayList<>();
+        categories.add(new DropdownEntryInfo(LocalizableString.fromString("All Categories"), ""));
+
+        ItemCategory.getAssetMap().getAssetMap().values().forEach(category -> {
+
+            categories.add(new DropdownEntryInfo(LocalizableString.fromString(category.getId()), category.getId()));
+            ItemCategory[] children = category.getChildren();
+            if (children != null) {
+                for (ItemCategory child : children) {
+                    categories.add(new DropdownEntryInfo(LocalizableString.fromString("    " +child.getId().toLowerCase()), category.getId() + "." + child.getId()));
+                }
+            }
+        });
+        commandBuilder.set("#CategoryFilter.Entries", categories);
+
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ModFilter", EventData.of(KEY_MOD_FILTER, "#ModFilter.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CategoryFilter", EventData.of(KEY_CATEGORY_FILTER, "#CategoryFilter.Value"));
 
         this.updateItemList(items, commandBuilder, eventBuilder);
     }
@@ -568,7 +621,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     public static class GuiData {
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
         static final String KEY_MOD_FILTER = "@ModFilter";
+        static final String KEY_CATEGORY_FILTER = "@CategoryFilter";
         static final String KEY_SORT_MODE = "@SortMode";
+        static final String KEY_ALT_KEYBIND = "@AltKeybind";
+        static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
         static final String KEY_ITEM = "SelectItem";
         static final String KEY_GIVE_ITEM = "GiveItem";
         static final String KEY_LIST_PAGE = "ListPage";
@@ -577,7 +633,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         public static final BuilderCodec<GuiData> CODEC = BuilderCodec.builder(GuiData.class, GuiData::new)
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
+            .addField(new KeyedCodec<>(KEY_CATEGORY_FILTER, Codec.STRING), (guiData, s) -> guiData.categoryFilter = s, guiData -> guiData.categoryFilter)
             .addField(new KeyedCodec<>(KEY_SORT_MODE, Codec.STRING), (guiData, s) -> guiData.sortMode = s, guiData -> guiData.sortMode)
+            .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
+            .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
@@ -589,7 +648,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String giveItem;
         private String searchQuery;
         private String modFilter;
+        private String categoryFilter;
         private String sortMode;
+        private Boolean altKeybind;
+        private Boolean showHiddenItems;
         private String listPage;
         private String recipeInPage;
         private String recipeOutPage;

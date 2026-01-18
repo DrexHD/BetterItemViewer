@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
+import java.util.concurrent.CompletableFuture;
 
 public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
     @Override
@@ -29,8 +30,12 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
             if (ref == null || !ref.isValid()) return;
             if (playerRefComponent == null) return;
 
-            BetterItemViewerComponent component = commandBuffer.getComponent(ref, BetterItemViewerComponent.getComponentType());
-            player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component));
+            BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+            CompletableFuture.runAsync(() -> {
+                if (component.altKeybind) {
+                    player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component));
+                }
+            });
 
         }
     }

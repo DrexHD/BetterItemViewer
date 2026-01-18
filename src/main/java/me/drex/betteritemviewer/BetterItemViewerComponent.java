@@ -16,6 +16,8 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         .add()
         .append(new KeyedCodec<>("ModFilter", Codec.STRING), (o, v) -> o.modFilter = v, o -> o.modFilter)
         .add()
+        .append(new KeyedCodec<>("CategoryFilter", Codec.STRING), (o, v) -> o.categoryFilter = v, o -> o.categoryFilter)
+        .add()
         .append(new KeyedCodec<>("SortMode", Codec.STRING), (o, v) -> o.sortMode = v, o -> o.sortMode)
         .add()
         .append(new KeyedCodec<>("SelectedItem", Codec.STRING), (o, v) -> o.selectedItem = v, o -> o.selectedItem)
@@ -26,15 +28,22 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         .add()
         .append(new KeyedCodec<>("SelectedRecipeOutPage", Codec.INTEGER), (o, v) -> o.selectedRecipeOutPage = v, o -> o.selectedRecipeOutPage)
         .add()
+        .append(new KeyedCodec<>("ShowHiddenItems", Codec.BOOLEAN), (o, v) -> o.showHiddenItems = v, o -> o.showHiddenItems)
+        .add()
+        .append(new KeyedCodec<>("AltKeybind", Codec.BOOLEAN), (o, v) -> o.altKeybind = v, o -> o.altKeybind)
+        .add()
         .build();
 
     public String searchQuery = "";
     public String modFilter = "";
-    public String sortMode;
+    public String categoryFilter = "";
+    public String sortMode = "Item Name (Ascending)";
     public String selectedItem;
     public int selectedPage = 0;
     public int selectedRecipeInPage = 0;
     public int selectedRecipeOutPage = 0;
+    public boolean showHiddenItems = false;
+    public boolean altKeybind = true;
 
     public static ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
         return Main.getInstance().getComponentType();
@@ -43,19 +52,22 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     private BetterItemViewerComponent() {
     }
 
-    public BetterItemViewerComponent(String searchQuery, String modFilter, String sortMode, String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage) {
+    public BetterItemViewerComponent(String searchQuery, String modFilter, String categoryFilter, String sortMode, String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage, boolean showHiddenItems, boolean altKeybind) {
         this.searchQuery = searchQuery;
         this.modFilter = modFilter;
+        this.categoryFilter = categoryFilter;
         this.sortMode = sortMode;
         this.selectedItem = selectedItem;
         this.selectedPage = selectedPage;
         this.selectedRecipeInPage = selectedRecipeInPage;
         this.selectedRecipeOutPage = selectedRecipeOutPage;
+        this.showHiddenItems = showHiddenItems;
+        this.altKeybind = altKeybind;
     }
 
     @Nullable
     @Override
     public Component<EntityStore> clone() {
-        return new BetterItemViewerComponent(searchQuery, modFilter, sortMode, selectedItem, selectedPage, selectedRecipeInPage, selectedRecipeOutPage);
+        return new BetterItemViewerComponent(searchQuery, modFilter, categoryFilter, sortMode, selectedItem, selectedPage, selectedRecipeInPage, selectedRecipeOutPage, showHiddenItems, altKeybind);
     }
 }
