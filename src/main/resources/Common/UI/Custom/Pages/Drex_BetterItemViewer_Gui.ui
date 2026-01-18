@@ -16,6 +16,10 @@ $C.@PageOverlay {
         $C.@HeaderSearch {}
 
         $C.@DropdownBox #ModFilter {
+          Padding: (Left: 10);
+        }
+        $C.@DropdownBox #SortMode {
+          Padding: (Left: 10);
         }
       }
     }

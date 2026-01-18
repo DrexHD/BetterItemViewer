@@ -15,6 +15,7 @@ import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.*;
+import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -36,11 +37,13 @@ import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 
 import javax.annotation.Nonnull;
+import java.awt.*;
 import java.lang.reflect.Field;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
+import java.util.function.Function;
 
 import static me.drex.betteritemviewer.BetterItemViewerGui.GuiData.*;
 
@@ -48,6 +51,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     private String searchQuery;
     private String modFilter = "";
+    private String sortMode;
     private Item selectedItem;
     private int selectedPage = 0;
     private int selectedRecipeInPage = 0;
@@ -60,6 +64,26 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         "Club_Swing_Left_Damage",
         "Spear_Stab_Damage"
     };
+    public static final Function<PlayerRef, Comparator<Item>> DEFAULT_COMPARATOR = playerRef ->
+        Comparator.comparing(item ->
+            Objects.requireNonNullElse(
+                I18nModule.get().getMessage(playerRef.getLanguage(), item.getTranslationKey()),
+                item.getTranslationKey()
+            )
+        );
+
+    private static final Map<String, Function<PlayerRef, Comparator<Item>>> COMPARATORS =
+        new LinkedHashMap<>() {{
+            put("Item Name (Ascending)", DEFAULT_COMPARATOR);
+            put("Item Name (Descending)", playerRef -> DEFAULT_COMPARATOR.apply(playerRef).reversed());
+            put("Item Quality", _ ->
+                Comparator.<Item>comparingInt(item -> {
+                    int qualityIndex = item.getQualityIndex();
+                    ItemQuality itemQuality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+                    return (itemQuality != null ? itemQuality : ItemQuality.DEFAULT_ITEM_QUALITY).getQualityValue();
+                }).thenComparingInt(Item::getQualityIndex).reversed()
+            );
+        }};
 
     public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, String defaultSearchQuery) {
         super(playerRef, lifetime, GuiData.CODEC);
@@ -134,12 +158,21 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.searchQuery != null) {
             this.searchQuery = data.searchQuery.trim().toLowerCase();
+            this.selectedPage = 0;
             this.buildList(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.modFilter != null) {
             this.modFilter = data.modFilter;
+            this.selectedPage = 0;
+            this.buildList(commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.sortMode != null) {
+            this.sortMode = data.sortMode;
+            this.selectedPage = 0;
             this.buildList(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
@@ -182,11 +215,8 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             return false;
         });
 
-        items.sort((item1, item2) -> {
-            String name1 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item1.getTranslationKey()), item1.getTranslationKey());
-            String name2 = Objects.requireNonNullElse(I18nModule.get().getMessage(this.playerRef.getLanguage(), item2.getTranslationKey()), item2.getTranslationKey());
-            return name1.compareTo(name2);
-        });
+        Comparator<Item> comparator = COMPARATORS.getOrDefault(sortMode, DEFAULT_COMPARATOR).apply(playerRef);
+        items.sort(comparator);
 
         if (selectedItem == null && !items.isEmpty()) {
             selectedItem = items.getFirst();
@@ -230,7 +260,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         commandBuilder.set("#ModFilter.Entries", mods);
 
+        ObjectArrayList<DropdownEntryInfo> sortModes = new ObjectArrayList<>();
+        COMPARATORS.forEach((name, _) -> sortModes.add(new DropdownEntryInfo(LocalizableString.fromString(name), name)));
+        commandBuilder.set("#SortMode.Entries", sortModes);
+
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ModFilter", EventData.of(KEY_MOD_FILTER, "#ModFilter.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
 
         this.updateItemList(items, commandBuilder, eventBuilder);
     }
@@ -516,11 +551,22 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
         commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Max Stack: " + item.getMaxStack()));
         i++;
+
+        int qualityIndex = item.getQualityIndex();
+        ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+        if (quality != null) {
+            commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+            int rgb = ColorParseUtil.colorToARGBInt(quality.getTextColor());
+            commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Item Quality: ").insert(Message.translation(quality.getLocalizationKey()).color(new Color(rgb))));
+            i++;
+        }
+
     }
 
     public static class GuiData {
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
         static final String KEY_MOD_FILTER = "@ModFilter";
+        static final String KEY_SORT_MODE = "@SortMode";
         static final String KEY_ITEM = "SelectItem";
         static final String KEY_GIVE_ITEM = "GiveItem";
         static final String KEY_LIST_PAGE = "ListPage";
@@ -529,6 +575,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         public static final BuilderCodec<GuiData> CODEC = BuilderCodec.builder(GuiData.class, GuiData::new)
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
+            .addField(new KeyedCodec<>(KEY_SORT_MODE, Codec.STRING), (guiData, s) -> guiData.sortMode = s, guiData -> guiData.sortMode)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
@@ -540,6 +587,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String giveItem;
         private String searchQuery;
         private String modFilter;
+        private String sortMode;
         private String listPage;
         private String recipeInPage;
         private String recipeOutPage;
