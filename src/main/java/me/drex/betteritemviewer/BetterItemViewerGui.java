@@ -8,14 +8,18 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
+import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.*;
+import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
@@ -78,10 +82,24 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         super.handleDataEvent(ref, store, data);
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
-        if (data.item != null) {
-            Main.ITEMS.stream().filter(item -> Objects.equals(item.getId(), data.item)).findFirst().ifPresent(item -> this.selectedItem = item);
+        if (data.selectItem != null) {
+            this.selectedItem = Item.getAssetMap().getAsset(data.selectItem);
             this.buildStats(commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.giveItem != null) {
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+            if (!ref.isValid()) return;
+            Player player = store.getComponent(ref, Player.getComponentType());
+            if (player == null) return;
+            GameMode gameMode = player.getGameMode();
+            if (gameMode != GameMode.Creative) return;
+            Item item = Item.getAssetMap().getAsset(data.giveItem);
+            if (item == null) return;
+            ItemStack stack = new ItemStack(data.giveItem);
+            ItemContainer itemContainer = player.getInventory().getCombinedHotbarFirst();
+            itemContainer.addItemStack(stack);
         }
 
         if (data.recipeInPage != null) {
@@ -257,6 +275,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
             commandBuilder.set("#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemName.TextSpans", Message.translation(item.getTranslationKey()));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_ITEM, item.getId()));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.RightClicking, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_GIVE_ITEM, item.getId()));
             ++cardsInCurrentRow;
             if (cardsInCurrentRow >= 7) {
                 cardsInCurrentRow = 0;
@@ -502,20 +521,23 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     public static class GuiData {
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
         static final String KEY_MOD_FILTER = "@ModFilter";
-        static final String KEY_ITEM = "Item";
+        static final String KEY_ITEM = "SelectItem";
+        static final String KEY_GIVE_ITEM = "GiveItem";
         static final String KEY_LIST_PAGE = "ListPage";
         static final String KEY_RECIPE_IN_PAGE = "RecipeInPage";
         static final String KEY_RECIPE_OUT_PAGE = "RecipeOutPage";
         public static final BuilderCodec<GuiData> CODEC = BuilderCodec.builder(GuiData.class, GuiData::new)
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
-            .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.item = s, guiData -> guiData.item)
+            .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
+            .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_IN_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeInPage = s, guiData -> guiData.recipeInPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_OUT_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeOutPage = s, guiData -> guiData.recipeOutPage)
             .build();
 
-        private String item;
+        private String selectItem;
+        private String giveItem;
         private String searchQuery;
         private String modFilter;
         private String listPage;
