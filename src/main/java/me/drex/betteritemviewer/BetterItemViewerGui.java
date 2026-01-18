@@ -496,7 +496,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i.getAndIncrement();
 
         for (MaterialQuantity input : recipe.getInput()) {
-            addMaterialQuantity(input, commandBuilder, tag, i);
+            addMaterialQuantity(input, commandBuilder, eventBuilder, tag, i);
         }
 
         commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #ffffff);}");
@@ -504,11 +504,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i.getAndIncrement();
 
         for (MaterialQuantity output : recipe.getOutputs()) {
-            addMaterialQuantity(output, commandBuilder, tag, i);
+            addMaterialQuantity(output, commandBuilder, eventBuilder, tag, i);
         }
     }
 
-    private void addMaterialQuantity(MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, String tag, AtomicInteger i) {
+    private void addMaterialQuantity(MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, AtomicInteger i) {
         String itemId = materialQuantity.getItemId();
         String resourceTypeId = materialQuantity.getResourceTypeId();
 
@@ -521,6 +521,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.set(tag + "[" + i + "] #ItemIcon.ItemId", itemId);
             commandBuilder.set(tag + "[" + i + "] #ItemIcon.Visible", true);
             commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(quantity).insert(Message.translation(inputItem.getTranslationKey())));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_ITEM, itemId));
             i.getAndIncrement();
         } else if (resourceTypeId != null) {
             ResourceType resourceType = ResourceType.getAssetMap().getAsset(resourceTypeId);
@@ -530,6 +531,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.AssetPath", resourceType.getIcon());
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.Visible", true);
             commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(quantity).insert(Message.raw(resourceType.getName())));
+
             i.getAndIncrement();
         }
     }
