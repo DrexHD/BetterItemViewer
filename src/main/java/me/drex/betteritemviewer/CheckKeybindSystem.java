@@ -29,7 +29,8 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
             if (ref == null || !ref.isValid()) return;
             if (playerRefComponent == null) return;
 
-            player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, ""));
+            BetterItemViewerComponent component = commandBuffer.getComponent(ref, BetterItemViewerComponent.getComponentType());
+            player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component));
 
         }
     }

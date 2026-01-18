@@ -49,13 +49,6 @@ import static me.drex.betteritemviewer.BetterItemViewerGui.GuiData.*;
 
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.GuiData> {
 
-    private String searchQuery;
-    private String modFilter = "";
-    private String sortMode;
-    private Item selectedItem;
-    private int selectedPage = 0;
-    private int selectedRecipeInPage = 0;
-    private int selectedRecipeOutPage = 0;
     private static final String[] PRIMARY_INTERACTION_VARS = new String[]{
         "Swing_Left_Damage",
         "Longsword_Swing_Left_Damage",
@@ -85,18 +78,24 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             );
         }};
 
-    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, String defaultSearchQuery) {
+    private final BetterItemViewerComponent component;
+
+    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, BetterItemViewerComponent component) {
         super(playerRef, lifetime, GuiData.CODEC);
-        this.searchQuery = defaultSearchQuery.toLowerCase();
+        // TODO
+//        this.searchQuery = defaultSearchQuery.toLowerCase();
+        this.component = component;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder, @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
         uiCommandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
-        uiCommandBuilder.set("#SearchInput.Value", this.searchQuery);
+        uiCommandBuilder.set("#SearchInput.Value", component.searchQuery);
+        uiCommandBuilder.set("#ModFilter.Value", component.modFilter);
+        uiCommandBuilder.set("#SortMode.Value", component.sortMode);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
-        this.buildList(uiCommandBuilder, uiEventBuilder);
-        this.buildStats(uiCommandBuilder, uiEventBuilder);
+        this.buildList(component, uiCommandBuilder, uiEventBuilder);
+        this.updateStats(component, uiCommandBuilder, uiEventBuilder);
     }
 
     // TODO fuel
@@ -104,11 +103,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull GuiData data) {
         super.handleDataEvent(ref, store, data);
+
+        BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
         if (data.selectItem != null) {
-            this.selectedItem = Item.getAssetMap().getAsset(data.selectItem);
-            this.buildStats(commandBuilder, eventBuilder);
+            settings.selectedItem = data.selectItem;
+            this.updateStats(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
@@ -128,63 +130,59 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.recipeInPage != null) {
             try {
-                this.selectedRecipeInPage += Integer.parseInt(data.recipeInPage);
+                settings.selectedRecipeInPage += Integer.parseInt(data.recipeInPage);
             } catch (NumberFormatException e) {
-                this.selectedRecipeInPage = 0;
+                settings.selectedRecipeInPage = 0;
             }
-            this.buildStats(commandBuilder, eventBuilder);
+            this.updateStats(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.recipeOutPage != null) {
             try {
-                this.selectedRecipeOutPage += Integer.parseInt(data.recipeOutPage);
+                settings.selectedRecipeOutPage += Integer.parseInt(data.recipeOutPage);
             } catch (NumberFormatException e) {
-                this.selectedRecipeOutPage = 0;
+                settings.selectedRecipeOutPage = 0;
             }
-            this.buildStats(commandBuilder, eventBuilder);
+            this.updateStats(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.listPage != null) {
             try {
-                this.selectedPage += Integer.parseInt(data.listPage);
+                settings.selectedPage += Integer.parseInt(data.listPage);
             } catch (NumberFormatException e) {
-                this.selectedPage = 0;
+                settings.selectedPage = 0;
             }
-            this.buildList(commandBuilder, eventBuilder);
+            this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.searchQuery != null) {
-            this.searchQuery = data.searchQuery.trim().toLowerCase();
-            this.selectedPage = 0;
-            this.buildList(commandBuilder, eventBuilder);
+            settings.searchQuery = data.searchQuery.trim().toLowerCase();
+            settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.modFilter != null) {
-            this.modFilter = data.modFilter;
-            this.selectedPage = 0;
-            this.buildList(commandBuilder, eventBuilder);
+            settings.modFilter = data.modFilter;
+            settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.sortMode != null) {
-            this.sortMode = data.sortMode;
-            this.selectedPage = 0;
-            this.buildList(commandBuilder, eventBuilder);
+            settings.sortMode = data.sortMode;
+            settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
     }
 
-    private void buildStats(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
-        this.updateStats(this.selectedItem, commandBuilder, eventBuilder);
-    }
-
-    private void buildList(@Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void buildList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         List<Item> items = new LinkedList<>(Main.ITEMS);
-        Set<String> modItems = Item.getAssetMap().getKeysForPack(modFilter);
+        Set<String> modItems = Item.getAssetMap().getKeysForPack(settings.modFilter);
 
         items.removeIf(item -> {
             if (item.getId().equals("Unknown")) return true;
@@ -196,17 +194,17 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 return true;
             }
 
-            if (!modFilter.isEmpty()) {
+            if (!settings.modFilter.isEmpty()) {
                 if (!modItems.contains(item.getId())) {
                     return true;
                 }
             }
 
 
-            if (!this.searchQuery.isEmpty()) {
-                boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(searchQuery) ||
-                    item.getId().toLowerCase().contains(searchQuery);
-                if (itemName != null && itemName.toLowerCase().contains(searchQuery)) {
+            if (!settings.searchQuery.isEmpty()) {
+                boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(settings.searchQuery) ||
+                    item.getId().toLowerCase().contains(settings.searchQuery);
+                if (itemName != null && itemName.toLowerCase().contains(settings.searchQuery)) {
                     matchesQuery = true;
                 }
                 return !matchesQuery;
@@ -215,28 +213,28 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             return false;
         });
 
-        Comparator<Item> comparator = COMPARATORS.getOrDefault(sortMode, DEFAULT_COMPARATOR).apply(playerRef);
+        Comparator<Item> comparator = COMPARATORS.getOrDefault(settings.sortMode, DEFAULT_COMPARATOR).apply(playerRef);
         items.sort(comparator);
 
-        if (selectedItem == null && !items.isEmpty()) {
-            selectedItem = items.getFirst();
+        if (settings.selectedItem == null && !items.isEmpty()) {
+            settings.selectedItem = items.getFirst().getId();
         }
 
         int entriesPerPage = 6 * 7;
 
         int size = items.size();
         int pages = Math.ceilDiv(size, entriesPerPage);
-        if (selectedPage >= pages) {
-            selectedPage = 0;
-        } else if (selectedPage < 0) {
-            selectedPage = pages - 1;
+        if (settings.selectedPage >= pages) {
+            settings.selectedPage = 0;
+        } else if (settings.selectedPage < 0) {
+            settings.selectedPage = pages - 1;
         }
 
-        items = items.stream().skip((long) selectedPage * entriesPerPage).limit(entriesPerPage).toList();
+        items = items.stream().skip((long) settings.selectedPage * entriesPerPage).limit(entriesPerPage).toList();
 
         if (pages > 1) {
             commandBuilder.set("#ListSection #PaginationControls.Visible", true);
-            commandBuilder.set("#ListSection #PaginationInfo.Text", (selectedPage + 1) + " / " + pages);
+            commandBuilder.set("#ListSection #PaginationInfo.Text", (settings.selectedPage + 1) + " / " + pages);
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #PrevPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(-1)));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #NextPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(+1)));
         } else {
@@ -270,8 +268,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         this.updateItemList(items, commandBuilder, eventBuilder);
     }
 
-    private void updateStats(Item selectedItem, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void updateStats(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ItemStats");
+        if (settings.selectedItem == null) return;
+        Item selectedItem = Item.getAssetMap().getAsset(settings.selectedItem);
         if (selectedItem == null) return;
         commandBuilder.set("#ItemTitle.Visible", true);
         commandBuilder.set("#ItemTitle #ItemIcon.ItemId", selectedItem.getId());
@@ -282,7 +282,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         addWeaponInfo(selectedItem, commandBuilder);
         addToolInfo(selectedItem, commandBuilder);
         addNpcLoot(selectedItem, commandBuilder);
-        addRecipes(selectedItem, commandBuilder, eventBuilder);
+        addRecipes(settings, selectedItem, commandBuilder, eventBuilder);
 
         commandBuilder.set("#ItemStats.Visible", true);
     }
@@ -430,9 +430,9 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         });
     }
 
-    private void addRecipes(Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        addRecipes(item, commandBuilder, eventBuilder, "Recipes", "#Recipes", Main.RECIPES_BY_INPUT, selectedRecipeInPage, currentPage -> selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
-        addRecipes(item, commandBuilder, eventBuilder, "Usages", "#UsedIn", Main.RECIPES_BY_OUTPUT, selectedRecipeOutPage, currentPage -> selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
+    private void addRecipes(BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+        addRecipes(item, commandBuilder, eventBuilder, "Recipes", "#Recipes", Main.RECIPES_BY_INPUT, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
+        addRecipes(item, commandBuilder, eventBuilder, "Usages", "#UsedIn", Main.RECIPES_BY_OUTPUT, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
     }
 
     private void addRecipes(

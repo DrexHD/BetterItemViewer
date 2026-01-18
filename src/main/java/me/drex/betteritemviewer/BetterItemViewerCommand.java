@@ -52,14 +52,13 @@ public class BetterItemViewerCommand extends AbstractCommand {
                 World world = store.getExternalData().getWorld();
                 return CompletableFuture.runAsync(() -> {
                     PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-                    var defaultSearch = "";
+                    if (playerRefComponent == null) return;
+                    BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                     if (context.get(this.argument) != null) {
-                        defaultSearch = context.get(this.argument);
+                        settings.searchQuery = context.get(this.argument);
                     }
-                    if (playerRefComponent != null) {
-                        player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, defaultSearch));
+                    player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings));
 
-                    }
                 }, world);
             } else {
                 context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);

@@ -2,6 +2,7 @@ package me.drex.betteritemviewer;
 
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
+import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3d;
@@ -40,13 +41,25 @@ public class Main extends JavaPlugin {
 
     private static boolean discoveredMobLoot = false;
 
+    private static Main instance;
+    private ComponentType<EntityStore, BetterItemViewerComponent> componentType;
+
+    public static Main getInstance() {
+        return instance;
+    }
+
     public Main(@Nonnull JavaPluginInit init) {
         super(init);
     }
 
+    public ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
+        return this.componentType;
+    }
+
     @Override
     protected void setup() {
-        super.setup();
+        instance = this;
+        this.componentType = this.getEntityStoreRegistry().registerComponent(BetterItemViewerComponent.class, "Drex_BetterItemViewer", BetterItemViewerComponent.CODEC);
         this.getCommandRegistry().registerCommand(new BetterItemViewerCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemAssetLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, Main::onRecipeLoad);
