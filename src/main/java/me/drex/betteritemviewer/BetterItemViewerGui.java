@@ -382,7 +382,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#Description[" + i + "].TextSpans", Message.raw("Description").bold(true));
         i++;
 
-        commandBuilder.appendInline("#Description", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+        commandBuilder.appendInline("#Description", "Label {Style: (FontSize: 16, TextColor: #aaaaaa, Wrap: true);}");
         commandBuilder.set("#Description[" + i + "].TextSpans", Message.translation(item.getDescriptionTranslationKey()));
         i++;
     }
