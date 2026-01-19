@@ -17,6 +17,7 @@ import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.events.StartWorldEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import com.hypixel.hytale.server.core.util.Config;
 import com.hypixel.hytale.server.npc.NPCPlugin;
 import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
@@ -42,6 +43,8 @@ public class Main extends JavaPlugin {
     private static boolean discoveredMobLoot = false;
 
     private static Main instance;
+
+    public final Config<BetterItemViewerConfig> config = this.withConfig("BetterItemViewer", BetterItemViewerConfig.CODEC);
     private ComponentType<EntityStore, BetterItemViewerComponent> componentType;
 
     public static Main getInstance() {
@@ -59,6 +62,7 @@ public class Main extends JavaPlugin {
     @Override
     protected void setup() {
         instance = this;
+        config.save();
         this.componentType = this.getEntityStoreRegistry().registerComponent(BetterItemViewerComponent.class, "Drex_BetterItemViewer", BetterItemViewerComponent.CODEC);
         this.getCommandRegistry().registerCommand(new BetterItemViewerCommand());
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemAssetLoad);

@@ -43,7 +43,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public int selectedRecipeInPage = 0;
     public int selectedRecipeOutPage = 0;
     public boolean showHiddenItems = false;
-    public boolean altKeybind = true;
+    public boolean altKeybind = Main.getInstance().config.get().defaultAltKeybind;
 
     public static ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
         return Main.getInstance().getComponentType();
