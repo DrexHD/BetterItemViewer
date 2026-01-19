@@ -9,9 +9,12 @@ import com.hypixel.hytale.component.system.tick.EntityTickingSystem;
 import com.hypixel.hytale.protocol.MovementStates;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.CustomUIPage;
+import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import me.drex.betteritemviewer.gui.BetterItemViewerGui;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -32,8 +35,9 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
 
             BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
             CompletableFuture.runAsync(() -> {
-                if (component.altKeybind) {
-                    player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component));
+                PageManager pageManager = player.getPageManager();
+                if (component.altKeybind && pageManager.getCustomPage() == null) {
+                    pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component));
                 }
             });
 
