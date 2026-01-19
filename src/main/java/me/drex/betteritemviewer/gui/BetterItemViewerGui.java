@@ -296,16 +296,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         ObjectArrayList<DropdownEntryInfo> mods = new ObjectArrayList<>();
         mods.add(new DropdownEntryInfo(LocalizableString.fromString("All Mods"), ""));
 
-        for (PluginManifest plugin : PluginManager.get().getAvailablePlugins().values()) {
-            Set<String> keysForPack = Item.getAssetMap().getKeysForPack(plugin.getName());
-            if (keysForPack == null || keysForPack.isEmpty()) continue;
-            mods.add(new DropdownEntryInfo(LocalizableString.fromString(plugin.getName()), plugin.getName()));
-        }
-
         for (AssetPack assetPack : AssetModule.get().getAssetPacks()) {
             Set<String> keysForPack = Item.getAssetMap().getKeysForPack(assetPack.getName());
             if (keysForPack == null || keysForPack.isEmpty()) continue;
-            mods.add(new DropdownEntryInfo(LocalizableString.fromString(assetPack.getName()), assetPack.getName()));
+            mods.add(new DropdownEntryInfo(LocalizableString.fromString(assetPack.getManifest().getName()), assetPack.getName()));
         }
         commandBuilder.set("#ModFilter.Entries", mods);
 
@@ -651,6 +645,17 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             int rgb = ColorParseUtil.colorToARGBInt(quality.getTextColor());
             commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Item Quality: ").insert(Message.translation(quality.getLocalizationKey()).color(new Color(rgb))));
             i++;
+        }
+
+        String assetPackId = Item.getAssetMap().getAssetPack(item.getId());
+        if (assetPackId != null) {
+            AssetPack assetPack = AssetModule.get().getAssetPack(assetPackId);
+            if (assetPack != null) {
+                PluginManifest manifest = assetPack.getManifest();
+                commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+                commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Mod: ").insert(Message.raw(manifest.getName())));
+                i++;
+            }
         }
 
     }
