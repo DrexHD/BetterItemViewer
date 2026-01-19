@@ -1,4 +1,4 @@
-package me.drex.betteritemviewer;
+package me.drex.betteritemviewer.gui;
 
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
@@ -26,8 +26,10 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Int
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.ui.Anchor;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
+import com.hypixel.hytale.server.core.ui.Value;
 import com.hypixel.hytale.server.core.ui.builder.EventData;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
@@ -35,6 +37,8 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import me.drex.betteritemviewer.BetterItemViewerComponent;
+import me.drex.betteritemviewer.Main;
 
 import javax.annotation.Nonnull;
 import java.awt.*;
@@ -45,7 +49,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 
-import static me.drex.betteritemviewer.BetterItemViewerGui.GuiData.*;
+import static me.drex.betteritemviewer.gui.BetterItemViewerGui.GuiData.*;
 
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.GuiData> {
 
@@ -92,6 +96,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         uiCommandBuilder.set("#ModFilter.Value", component.modFilter);
         uiCommandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
         uiCommandBuilder.set("#SortMode.Value", component.sortMode);
+        uiCommandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
         uiCommandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
         uiCommandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
@@ -182,6 +187,20 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
+        if (data.gridLayout != null) {
+            try {
+                String[] parts = data.gridLayout.split("x");
+
+                settings.itemListColumns = Math.max(Integer.parseInt(parts[0]), 1);
+                settings.itemListRows = Math.max(Integer.parseInt(parts[1]), 1);
+            } catch (Exception _) {
+
+            }
+            settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
         if (data.sortMode != null) {
             settings.sortMode = data.sortMode;
             settings.selectedPage = 0;
@@ -257,7 +276,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             settings.selectedItem = items.getFirst().getId();
         }
 
-        int entriesPerPage = 6 * 7;
+        int entriesPerPage = settings.itemListRows * settings.itemListColumns;
 
         int size = items.size();
         int pages = Math.ceilDiv(size, entriesPerPage);
@@ -269,15 +288,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         items = items.stream().skip((long) settings.selectedPage * entriesPerPage).limit(entriesPerPage).toList();
 
-        if (pages > 1) {
-            commandBuilder.set("#ListSection #PaginationControls.Visible", true);
-            commandBuilder.set("#ListSection #PaginationInfo.Text", (settings.selectedPage + 1) + " / " + pages);
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #PrevPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(-1)));
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #NextPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(+1)));
-        } else {
-            commandBuilder.set("#ListSection #PaginationControls.Visible", false);
-        }
+        commandBuilder.set("#ListSection #PaginationInfo.Text", (settings.selectedPage + 1) + " / " + pages);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #PrevPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(-1)));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ListSection #NextPageButton", EventData.of(KEY_LIST_PAGE, String.valueOf(+1)));
 
+        // Mod filter
         ObjectArrayList<DropdownEntryInfo> mods = new ObjectArrayList<>();
         mods.add(new DropdownEntryInfo(LocalizableString.fromString("All Mods"), ""));
 
@@ -292,13 +307,9 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             if (keysForPack == null || keysForPack.isEmpty()) continue;
             mods.add(new DropdownEntryInfo(LocalizableString.fromString(assetPack.getName()), assetPack.getName()));
         }
-
         commandBuilder.set("#ModFilter.Entries", mods);
 
-        ObjectArrayList<DropdownEntryInfo> sortModes = new ObjectArrayList<>();
-        COMPARATORS.forEach((name, _) -> sortModes.add(new DropdownEntryInfo(LocalizableString.fromString(name), name)));
-        commandBuilder.set("#SortMode.Entries", sortModes);
-
+        // Category filter
         ObjectArrayList<DropdownEntryInfo> categories = new ObjectArrayList<>();
         categories.add(new DropdownEntryInfo(LocalizableString.fromString("All Categories"), ""));
 
@@ -308,17 +319,43 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             ItemCategory[] children = category.getChildren();
             if (children != null) {
                 for (ItemCategory child : children) {
-                    categories.add(new DropdownEntryInfo(LocalizableString.fromString("    " +child.getId().toLowerCase()), category.getId() + "." + child.getId()));
+                    categories.add(new DropdownEntryInfo(LocalizableString.fromString("    " + child.getId().toLowerCase()), category.getId() + "." + child.getId()));
                 }
             }
         });
         commandBuilder.set("#CategoryFilter.Entries", categories);
 
+        // Sorting
+        ObjectArrayList<DropdownEntryInfo> sortModes = new ObjectArrayList<>();
+        COMPARATORS.forEach((name, _) -> sortModes.add(new DropdownEntryInfo(LocalizableString.fromString(name), name)));
+        commandBuilder.set("#SortMode.Entries", sortModes);
+
+        // Grid Layout
+        ObjectArrayList<DropdownEntryInfo> gridLayouts = new ObjectArrayList<>();
+        for (int cols = 5; cols <= 10; cols++) {
+            for (int rows = 5; rows <= 10; rows++) {
+                gridLayouts.add(new DropdownEntryInfo(LocalizableString.fromString("Grid Layout: " + cols + "x" + rows), cols + "x" + rows));
+            }
+        }
+
+        commandBuilder.set("#GridLayout.Entries", gridLayouts);
+
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ModFilter", EventData.of(KEY_MOD_FILTER, "#ModFilter.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CategoryFilter", EventData.of(KEY_CATEGORY_FILTER, "#CategoryFilter.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#GridLayout", EventData.of(KEY_GRID_LAYOUT, "#GridLayout.Value"));
 
-        this.updateItemList(items, commandBuilder, eventBuilder);
+        this.updateItemList(settings, items, commandBuilder, eventBuilder);
+
+        Anchor itemSectionAnchor = new Anchor();
+        itemSectionAnchor.setHeight(Value.of(settings.itemListRows * 100));
+        itemSectionAnchor.setWidth(Value.of(settings.itemListColumns * 128));
+        commandBuilder.setObject("#ItemSection.Anchor", itemSectionAnchor);
+
+        Anchor itemInfoSectionAnchor = new Anchor();
+        itemInfoSectionAnchor.setHeight(Value.of((settings.itemListRows * 100) + 40));
+        itemInfoSectionAnchor.setWidth(Value.of(550));
+        commandBuilder.setObject("#ItemInfoSection.Anchor", itemInfoSectionAnchor);
     }
 
     private void updateStats(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
@@ -340,7 +377,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#ItemStats.Visible", true);
     }
 
-    private void updateItemList(Collection<Item> items, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void updateItemList(BetterItemViewerComponent settings, Collection<Item> items, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ItemSection");
 
         int rowIndex = 0;
@@ -365,7 +402,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_ITEM, item.getId()));
             eventBuilder.addEventBinding(CustomUIEventBindingType.RightClicking, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_GIVE_ITEM, item.getId()));
             ++cardsInCurrentRow;
-            if (cardsInCurrentRow >= 7) {
+            if (cardsInCurrentRow >= settings.itemListColumns) {
                 cardsInCurrentRow = 0;
                 ++rowIndex;
             }
@@ -622,6 +659,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
         static final String KEY_MOD_FILTER = "@ModFilter";
         static final String KEY_CATEGORY_FILTER = "@CategoryFilter";
+        static final String KEY_GRID_LAYOUT = "@GridLayout";
         static final String KEY_SORT_MODE = "@SortMode";
         static final String KEY_ALT_KEYBIND = "@AltKeybind";
         static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
@@ -634,6 +672,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
             .addField(new KeyedCodec<>(KEY_CATEGORY_FILTER, Codec.STRING), (guiData, s) -> guiData.categoryFilter = s, guiData -> guiData.categoryFilter)
+            .addField(new KeyedCodec<>(KEY_GRID_LAYOUT, Codec.STRING), (guiData, s) -> guiData.gridLayout = s, guiData -> guiData.gridLayout)
             .addField(new KeyedCodec<>(KEY_SORT_MODE, Codec.STRING), (guiData, s) -> guiData.sortMode = s, guiData -> guiData.sortMode)
             .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
             .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
@@ -649,6 +688,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String searchQuery;
         private String modFilter;
         private String categoryFilter;
+        private String gridLayout;
         private String sortMode;
         private Boolean altKeybind;
         private Boolean showHiddenItems;

@@ -1,9 +1,11 @@
 $C = "../Common.ui";
 
 $C.@PageOverlay {
-
+  LayoutMode: CenterMiddle;
+  Group {
+    FlexWeight: 1;
+  }
   $C.@DecoratedContainer {
-    Anchor: (Width: 1900, Height: 850);
 
     #Title {
       Group {
@@ -67,8 +69,8 @@ $C.@PageOverlay {
         }
 
         Label {
-          Text: "Mod Settings";
-          Padding: (Top: 10);
+          Text: "Settings";
+          Padding: (Top: 30);
           Style: (
             FontSize: 18,
             RenderBold: true
@@ -82,27 +84,28 @@ $C.@PageOverlay {
 
         $C.@CheckBoxWithLabel #AltKeybind {
           @Text = "Enable 'Alt' Keybind";
-          Padding: (Top: 4);
+          Padding: (Top: 4, Bottom: 4);
+        }
+
+        $C.@DropdownBox #GridLayout {
+          Anchor: (Width: 280, Height: 24);
         }
       }
 
       Group #ListSection {
         LayoutMode: Top;
-        FlexWeight: 1;
 
         Group #ItemSection {
-          FlexWeight: 1;
-          Anchor: (Bottom: 10);
           LayoutMode: Top;
         }
 
         Group #PaginationControls {
-          LayoutMode: Left;
+          LayoutMode: Center;
           Padding: (Top: 10, Bottom: 10);
-          Anchor: (Height: 40, Width: 600);
+          Anchor: (Height: 40);
 
           TextButton #PrevPageButton {
-            Anchor: (Width: 200, Height: 24);
+            Anchor: (Width: 150, Height: 24);
             Text: "Prev";
             Style: $C.@SecondaryTextButtonStyle;
             Background: #1a1a1a(0.6);
@@ -110,19 +113,17 @@ $C.@PageOverlay {
           }
 
           Label #PaginationInfo {
-            FlexWeight: 1;
+            Anchor: (Width: 100);
             Style: (
               FontSize: 18,
               TextColor: #aaaaaa,
               Alignment: Center,
               RenderBold: true
             );
-            Background: #1a1a1a(0.5);
-            Padding: (Full: 8);
           }
 
           TextButton #NextPageButton {
-            Anchor: (Width: 200, Height: 24);
+            Anchor: (Width: 150, Height: 24);
             Text: "Next";
             Style: $C.@SecondaryTextButtonStyle;
             Background: #1a1a1a(0.6);
@@ -133,7 +134,6 @@ $C.@PageOverlay {
 
       Group #ItemInfoSection {
         LayoutMode: Top;
-        Anchor: (Width: 600);
 
         Padding: (Left: 10);
         Group #ItemInfo {
@@ -181,6 +181,9 @@ $C.@PageOverlay {
         }
       }
     }
+  }
+  Group {
+    FlexWeight: 1;
   }
 }
 

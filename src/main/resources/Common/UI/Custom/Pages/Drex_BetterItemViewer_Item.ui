@@ -1,9 +1,9 @@
 AssetImage {
-  Anchor: (Bottom: 10, Right: 10);
+  Anchor: (Bottom: 0, Right: 0);
 
   Button #ItemButton {
-    Anchor: (Width: 131);
-    Padding: (Full: 12);
+    Anchor: (Width: 128, Height: 100);
+    Padding: (Full: 8);
 
     LayoutMode: Top;
     Style: (
