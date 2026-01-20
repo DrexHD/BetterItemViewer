@@ -69,6 +69,27 @@ $C.@PageOverlay {
         }
 
         Label {
+          Text: "Filters";
+          Padding: (Top: 10);
+          Style: (
+            FontSize: 18,
+            RenderBold: true
+          );
+        }
+
+        $C.@DropdownBox #FilterCraftable {
+          Anchor: (Width: 280, Height: 30);
+        }
+
+//        Group {
+//          Padding: (Bottom: 4);
+//        }
+//
+//        $C.@DropdownBox #FilterCraftable {
+//          Anchor: (Width: 280, Height: 30);
+//        }
+
+        Label {
           Text: "Settings";
           Padding: (Top: 30);
           Style: (

@@ -3,6 +3,7 @@ package me.drex.betteritemviewer;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.EnumCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -11,12 +12,16 @@ import javax.annotation.Nullable;
 
 public class BetterItemViewerComponent implements Component<EntityStore> {
 
+    public static final Codec<Filter> FILTER_CODEC = new EnumCodec<>(Filter.class);
+
     public static final BuilderCodec<BetterItemViewerComponent> CODEC = BuilderCodec.builder(BetterItemViewerComponent.class, BetterItemViewerComponent::new)
         .append(new KeyedCodec<>("SearchQuery", Codec.STRING), (o, v) -> o.searchQuery = v, o -> o.searchQuery)
         .add()
         .append(new KeyedCodec<>("ModFilter", Codec.STRING), (o, v) -> o.modFilter = v, o -> o.modFilter)
         .add()
         .append(new KeyedCodec<>("CategoryFilter", Codec.STRING), (o, v) -> o.categoryFilter = v, o -> o.categoryFilter)
+        .add()
+        .append(new KeyedCodec<>("CraftableFilter", FILTER_CODEC), (o, v) -> o.craftableFilter = v, o -> o.craftableFilter)
         .add()
         .append(new KeyedCodec<>("SortMode", Codec.STRING), (o, v) -> o.sortMode = v, o -> o.sortMode)
         .add()
@@ -44,6 +49,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public String searchQuery = "";
     public String modFilter = "";
     public String categoryFilter = "";
+    public Filter craftableFilter = Filter.ALL;
     public String sortMode = "Item Name (Ascending)";
     public String selectedItem;
     public int selectedPage = 0;
@@ -61,10 +67,11 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     private BetterItemViewerComponent() {
     }
 
-    public BetterItemViewerComponent(String searchQuery, String modFilter, String categoryFilter, String sortMode, String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage, int itemListRows, int itemListColumns, boolean showHiddenItems, boolean altKeybind) {
+    public BetterItemViewerComponent(String searchQuery, String modFilter, String categoryFilter, Filter craftableFilter, String sortMode, String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage, int itemListRows, int itemListColumns, boolean showHiddenItems, boolean altKeybind) {
         this.searchQuery = searchQuery;
         this.modFilter = modFilter;
         this.categoryFilter = categoryFilter;
+        this.craftableFilter = craftableFilter;
         this.sortMode = sortMode;
         this.selectedItem = selectedItem;
         this.selectedPage = selectedPage;
@@ -79,6 +86,10 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     @Nullable
     @Override
     public Component<EntityStore> clone() {
-        return new BetterItemViewerComponent(searchQuery, modFilter, categoryFilter, sortMode, selectedItem, selectedPage, selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showHiddenItems, altKeybind);
+        return new BetterItemViewerComponent(searchQuery, modFilter, categoryFilter, craftableFilter, sortMode, selectedItem, selectedPage, selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showHiddenItems, altKeybind);
+    }
+
+    public enum Filter {
+        ALL, YES, NO
     }
 }

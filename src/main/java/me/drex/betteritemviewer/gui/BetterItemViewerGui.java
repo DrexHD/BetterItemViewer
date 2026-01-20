@@ -97,9 +97,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         uiCommandBuilder.set("#ModFilter.Value", component.modFilter);
         uiCommandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
         uiCommandBuilder.set("#SortMode.Value", component.sortMode);
+        uiCommandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
         uiCommandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
         uiCommandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
         uiCommandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
+        uiCommandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
         uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
@@ -179,6 +181,16 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.categoryFilter != null) {
             settings.categoryFilter = data.categoryFilter;
+            settings.selectedPage = 0;
+            this.buildList(settings, commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.craftableFilter != null) {
+            try {
+                settings.craftableFilter = BetterItemViewerComponent.Filter.valueOf(data.craftableFilter);
+            } catch (Exception _) {
+            }
             settings.selectedPage = 0;
             this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
@@ -275,6 +287,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 }
             }
 
+            if (settings.craftableFilter != BetterItemViewerComponent.Filter.ALL) {
+                boolean hasRecipe = Main.RECIPES_BY_INPUT.get(item.getId()) != null;
+                if (hasRecipe && settings.craftableFilter == BetterItemViewerComponent.Filter.NO) {
+                    return true;
+                } else if (!hasRecipe && settings.craftableFilter == BetterItemViewerComponent.Filter.YES) {
+                    return true;
+                }
+            }
 
             if (!settings.searchQuery.isEmpty()) {
                 boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(settings.searchQuery) ||
@@ -343,6 +363,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         COMPARATORS.forEach((name, _) -> sortModes.add(new DropdownEntryInfo(LocalizableString.fromString(name), name)));
         commandBuilder.set("#SortMode.Entries", sortModes);
 
+        // Craftable
+        ObjectArrayList<DropdownEntryInfo> craftable = new ObjectArrayList<>();
+        for (BetterItemViewerComponent.Filter value : BetterItemViewerComponent.Filter.values()) {
+            craftable.add(new DropdownEntryInfo(LocalizableString.fromString("Craftable: " + value.name()), value.name()));
+        }
+        commandBuilder.set("#FilterCraftable.Entries", craftable);
+
+
         // Grid Layout
         ObjectArrayList<DropdownEntryInfo> gridLayouts = new ObjectArrayList<>();
         for (int cols = 5; cols <= 10; cols++) {
@@ -354,8 +382,9 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#GridLayout.Entries", gridLayouts);
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ModFilter", EventData.of(KEY_MOD_FILTER, "#ModFilter.Value"));
-        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CategoryFilter", EventData.of(KEY_CATEGORY_FILTER, "#CategoryFilter.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FilterCraftable", EventData.of(KEY_CRAFTABLE_FILTER, "#FilterCraftable.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#GridLayout", EventData.of(KEY_GRID_LAYOUT, "#GridLayout.Value"));
 
         this.updateItemList(settings, items, commandBuilder, eventBuilder);
@@ -686,6 +715,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_SEARCH_QUERY = "@SearchQuery";
         static final String KEY_MOD_FILTER = "@ModFilter";
         static final String KEY_CATEGORY_FILTER = "@CategoryFilter";
+        static final String KEY_CRAFTABLE_FILTER = "@CraftableFilter";
         static final String KEY_GRID_LAYOUT = "@GridLayout";
         static final String KEY_SORT_MODE = "@SortMode";
         static final String KEY_ALT_KEYBIND = "@AltKeybind";
@@ -700,6 +730,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
             .addField(new KeyedCodec<>(KEY_CATEGORY_FILTER, Codec.STRING), (guiData, s) -> guiData.categoryFilter = s, guiData -> guiData.categoryFilter)
+            .addField(new KeyedCodec<>(KEY_CRAFTABLE_FILTER, Codec.STRING), (guiData, s) -> guiData.craftableFilter = s, guiData -> guiData.craftableFilter)
             .addField(new KeyedCodec<>(KEY_GRID_LAYOUT, Codec.STRING), (guiData, s) -> guiData.gridLayout = s, guiData -> guiData.gridLayout)
             .addField(new KeyedCodec<>(KEY_SORT_MODE, Codec.STRING), (guiData, s) -> guiData.sortMode = s, guiData -> guiData.sortMode)
             .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
@@ -718,6 +749,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String searchQuery;
         private String modFilter;
         private String categoryFilter;
+        private String craftableFilter;
         private String gridLayout;
         private String sortMode;
         private Boolean altKeybind;
