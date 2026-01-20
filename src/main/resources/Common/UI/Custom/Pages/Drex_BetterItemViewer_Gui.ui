@@ -98,14 +98,19 @@ $C.@PageOverlay {
           );
         }
 
+        $C.@CheckBoxWithLabel #ShowSalvager {
+          @Text = "Show Salvager Recipes";
+          Padding: (Top: 2);
+        }
+
         $C.@CheckBoxWithLabel #ShowHiddenItems {
           @Text = "Show Hidden Items";
-          Padding: (Top: 4);
+          Padding: (Top: 2);
         }
 
         $C.@CheckBoxWithLabel #AltKeybind {
           @Text = "Enable 'Alt' Keybind";
-          Padding: (Top: 4, Bottom: 4);
+          Padding: (Top: 2, Bottom: 4);
         }
 
         $C.@DropdownBox #GridLayout {

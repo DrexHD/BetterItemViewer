@@ -33,13 +33,12 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         .add()
         .append(new KeyedCodec<>("SelectedRecipeOutPage", Codec.INTEGER), (o, v) -> o.selectedRecipeOutPage = v, o -> o.selectedRecipeOutPage)
         .add()
-
         .append(new KeyedCodec<>("ItemListRows", Codec.INTEGER), (o, v) -> o.itemListRows = v, o -> o.itemListRows)
         .add()
-
         .append(new KeyedCodec<>("ItemListColumns", Codec.INTEGER), (o, v) -> o.itemListColumns = v, o -> o.itemListColumns)
         .add()
-
+        .append(new KeyedCodec<>("ShowSalvagerRecipes", Codec.BOOLEAN), (o, v) -> o.showSalvagerRecipes = v, o -> o.showSalvagerRecipes)
+        .add()
         .append(new KeyedCodec<>("ShowHiddenItems", Codec.BOOLEAN), (o, v) -> o.showHiddenItems = v, o -> o.showHiddenItems)
         .add()
         .append(new KeyedCodec<>("AltKeybind", Codec.BOOLEAN), (o, v) -> o.altKeybind = v, o -> o.altKeybind)
@@ -57,6 +56,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public int selectedRecipeOutPage = 0;
     public int itemListRows = 9;
     public int itemListColumns = 8;
+    public boolean showSalvagerRecipes = false;
     public boolean showHiddenItems = false;
     public boolean altKeybind = Main.getInstance().config.get().defaultAltKeybind;
 
@@ -67,7 +67,11 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     private BetterItemViewerComponent() {
     }
 
-    public BetterItemViewerComponent(String searchQuery, String modFilter, String categoryFilter, Filter craftableFilter, String sortMode, String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage, int itemListRows, int itemListColumns, boolean showHiddenItems, boolean altKeybind) {
+    public BetterItemViewerComponent(
+        String searchQuery, String modFilter, String categoryFilter, Filter craftableFilter, String sortMode,
+        String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage, int itemListRows,
+        int itemListColumns, boolean showSalvagerRecipes, boolean showHiddenItems, boolean altKeybind
+    ) {
         this.searchQuery = searchQuery;
         this.modFilter = modFilter;
         this.categoryFilter = categoryFilter;
@@ -79,6 +83,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         this.selectedRecipeOutPage = selectedRecipeOutPage;
         this.itemListRows = itemListRows;
         this.itemListColumns = itemListColumns;
+        this.showSalvagerRecipes = showSalvagerRecipes;
         this.showHiddenItems = showHiddenItems;
         this.altKeybind = altKeybind;
     }
@@ -86,7 +91,10 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     @Nullable
     @Override
     public Component<EntityStore> clone() {
-        return new BetterItemViewerComponent(searchQuery, modFilter, categoryFilter, craftableFilter, sortMode, selectedItem, selectedPage, selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showHiddenItems, altKeybind);
+        return new BetterItemViewerComponent(
+            searchQuery, modFilter, categoryFilter, craftableFilter, sortMode, selectedItem, selectedPage,
+            selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showSalvagerRecipes, showHiddenItems, altKeybind
+        );
     }
 
     public enum Filter {

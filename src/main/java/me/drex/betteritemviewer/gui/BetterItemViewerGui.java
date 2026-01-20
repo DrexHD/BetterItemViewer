@@ -92,22 +92,23 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     @Override
-    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder uiCommandBuilder, @Nonnull UIEventBuilder uiEventBuilder, @Nonnull Store<EntityStore> store) {
-        uiCommandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
-        uiCommandBuilder.set("#SearchInput.Value", component.searchQuery);
-        uiCommandBuilder.set("#ModFilter.Value", component.modFilter);
-        uiCommandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
-        uiCommandBuilder.set("#SortMode.Value", component.sortMode);
-        uiCommandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
-        uiCommandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
-        uiCommandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
-        uiCommandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
-        uiCommandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
-        uiEventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
-        this.buildList(component, uiCommandBuilder, uiEventBuilder);
-        this.updateStats(component, uiCommandBuilder, uiEventBuilder);
+    public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
+        commandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
+        commandBuilder.set("#SearchInput.Value", component.searchQuery);
+        commandBuilder.set("#ModFilter.Value", component.modFilter);
+        commandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
+        commandBuilder.set("#SortMode.Value", component.sortMode);
+        commandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
+        commandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
+        commandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
+        commandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
+        commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvager #CheckBox", EventData.of(KEY_SHOW_SALVAGER_RECIPES, "#ShowSalvager #CheckBox.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
+        this.buildList(component, commandBuilder, eventBuilder);
+        this.updateStats(component, commandBuilder, eventBuilder);
     }
 
     // TODO fuel
@@ -231,6 +232,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
+        if (data.showSalvagerRecipes != null) {
+            settings.showSalvagerRecipes = data.showSalvagerRecipes;
+            this.updateStats(settings, commandBuilder, eventBuilder);
+            this.buildList(settings, commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
         if (data.showHiddenItems != null) {
             settings.showHiddenItems = data.showHiddenItems;
             this.buildList(settings, commandBuilder, eventBuilder);
@@ -323,13 +331,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                     if (!matchesTag) {
                         return true;
                     }
-//                    int tagIndex = AssetRegistry.getTagIndex(searchQuery);
-//                    if (tagIndex != Integer.MIN_VALUE) {
-//                        Set<String> keysForTag = Item.getAssetMap().getKeysForTag(tagIndex);
-//                        if (!keysForTag.contains(item.getId())) {
-//                            return true;
-//                        }
-//                    }
                 } else {
                     boolean matchesNameOrId = item.getId().toLowerCase().contains(searchQuery);
                     if (itemName != null && itemName.toLowerCase().contains(searchQuery)) {
@@ -601,17 +602,32 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void addRecipes(BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        addRecipes(item, commandBuilder, eventBuilder, "Recipes", "#Recipes", Main.RECIPES_BY_INPUT, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
-        addRecipes(item, commandBuilder, eventBuilder, "Usages", "#UsedIn", Main.RECIPES_BY_OUTPUT, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
+        addRecipes(settings, item, commandBuilder, eventBuilder, "Recipes", "#Recipes", Main.RECIPES_BY_INPUT, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
+        addRecipes(settings, item, commandBuilder, eventBuilder, "Usages", "#UsedIn", Main.RECIPES_BY_OUTPUT, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
     }
 
     private void addRecipes(
-        Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String title, String tag,
-        Map<String, List<CraftingRecipe>> recipes, int currentPage, Consumer<Integer> pageChange,
-        String eventKey
+        BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder,
+        String title, String tag, Map<String, List<CraftingRecipe>> recipes, int currentPage,
+        Consumer<Integer> pageChange, String eventKey
     ) {
         List<CraftingRecipe> craftingRecipes = recipes.get(item.getId());
-        if (craftingRecipes == null || craftingRecipes.isEmpty()) return;
+
+        if (craftingRecipes == null) return;
+
+        craftingRecipes = craftingRecipes.stream().filter(craftingRecipe -> {
+            BenchRequirement[] benchRequirements = craftingRecipe.getBenchRequirement();
+            if (benchRequirements == null) return true;
+            for (BenchRequirement benchRequirement : benchRequirements) {
+                if (benchRequirement.id != null && benchRequirement.id.equals("Salvagebench") && !settings.showSalvagerRecipes) {
+                    return false;
+                }
+            }
+            return true;
+        }).toList();
+
+        if (craftingRecipes.isEmpty()) return;
+
         AtomicInteger i = new AtomicInteger();
         commandBuilder.appendInline("#ItemStats", "Group " + tag + " {LayoutMode: Top; Padding: (Top: 12);}");
         commandBuilder.appendInline(tag, "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
@@ -755,6 +771,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_GRID_LAYOUT = "@GridLayout";
         static final String KEY_SORT_MODE = "@SortMode";
         static final String KEY_ALT_KEYBIND = "@AltKeybind";
+        static final String KEY_SHOW_SALVAGER_RECIPES = "@ShowSalvagerRecipes";
         static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
         static final String KEY_ITEM = "SelectItem";
         static final String KEY_SET_SEARCH = "SetSearch";
@@ -771,6 +788,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_GRID_LAYOUT, Codec.STRING), (guiData, s) -> guiData.gridLayout = s, guiData -> guiData.gridLayout)
             .addField(new KeyedCodec<>(KEY_SORT_MODE, Codec.STRING), (guiData, s) -> guiData.sortMode = s, guiData -> guiData.sortMode)
             .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
+            .addField(new KeyedCodec<>(KEY_SHOW_SALVAGER_RECIPES, Codec.BOOLEAN), (guiData, s) -> guiData.showSalvagerRecipes = s, guiData -> guiData.showSalvagerRecipes)
             .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
             .addField(new KeyedCodec<>(KEY_SET_SEARCH, Codec.STRING), (guiData, s) -> guiData.setSearch = s, guiData -> guiData.setSearch)
@@ -792,6 +810,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String gridLayout;
         private String sortMode;
         private Boolean altKeybind;
+        private Boolean showSalvagerRecipes;
         private Boolean showHiddenItems;
         private String listPage;
         private String recipeInPage;
