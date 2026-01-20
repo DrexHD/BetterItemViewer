@@ -9,6 +9,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
 import com.hypixel.hytale.protocol.GameMode;
+import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
 import com.hypixel.hytale.server.core.Message;
@@ -122,6 +123,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (data.selectItem != null) {
             settings.selectedItem = data.selectItem;
             this.updateStats(settings, commandBuilder, eventBuilder);
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+        }
+
+        if (data.setSearch != null) {
+            settings.searchQuery = data.setSearch.trim().toLowerCase();
+            settings.selectedPage = 0;
+            commandBuilder.set("#SearchInput.Value", settings.searchQuery);
+            this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
@@ -297,12 +306,38 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             }
 
             if (!settings.searchQuery.isEmpty()) {
-                boolean matchesQuery = itemName != null && itemName.toLowerCase().contains(settings.searchQuery) ||
-                    item.getId().toLowerCase().contains(settings.searchQuery);
-                if (itemName != null && itemName.toLowerCase().contains(settings.searchQuery)) {
-                    matchesQuery = true;
+                String searchQuery = settings.searchQuery;
+                if (searchQuery.startsWith("#")) {
+                    searchQuery = searchQuery.substring(1);
+
+                    ItemResourceType[] resourceTypes = item.getResourceTypes();
+                    if (resourceTypes == null) return true;
+
+                    boolean matchesTag = false;
+                    for (ItemResourceType resourceType : resourceTypes) {
+                        if (resourceType.id != null && resourceType.id.toLowerCase().contains(searchQuery)) {
+                            matchesTag = true;
+                            break;
+                        }
+                    }
+                    if (!matchesTag) {
+                        return true;
+                    }
+//                    int tagIndex = AssetRegistry.getTagIndex(searchQuery);
+//                    if (tagIndex != Integer.MIN_VALUE) {
+//                        Set<String> keysForTag = Item.getAssetMap().getKeysForTag(tagIndex);
+//                        if (!keysForTag.contains(item.getId())) {
+//                            return true;
+//                        }
+//                    }
+                } else {
+                    boolean matchesNameOrId = item.getId().toLowerCase().contains(searchQuery);
+                    if (itemName != null && itemName.toLowerCase().contains(searchQuery)) {
+                        matchesNameOrId = true;
+                    }
+                    return !matchesNameOrId;
                 }
-                return !matchesQuery;
+
             }
 
             return false;
@@ -666,6 +701,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.AssetPath", resourceType.getIcon());
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.Visible", true);
             commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(quantity).insert(Message.raw(resourceType.getName())));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_SET_SEARCH, "#" + resourceTypeId));
 
             i.getAndIncrement();
         }
@@ -721,6 +757,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_ALT_KEYBIND = "@AltKeybind";
         static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
         static final String KEY_ITEM = "SelectItem";
+        static final String KEY_SET_SEARCH = "SetSearch";
         static final String KEY_GIVE_ITEM = "GiveItem";
         static final String KEY_GIVE_ITEM_STACK = "GiveItemStack";
         static final String KEY_LIST_PAGE = "ListPage";
@@ -736,6 +773,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
             .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
+            .addField(new KeyedCodec<>(KEY_SET_SEARCH, Codec.STRING), (guiData, s) -> guiData.setSearch = s, guiData -> guiData.setSearch)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM_STACK, Codec.STRING), (guiData, s) -> guiData.giveItemStack = s, guiData -> guiData.giveItemStack)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
@@ -744,6 +782,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .build();
 
         private String selectItem;
+        private String setSearch;
         private String giveItem;
         private String giveItemStack;
         private String searchQuery;
