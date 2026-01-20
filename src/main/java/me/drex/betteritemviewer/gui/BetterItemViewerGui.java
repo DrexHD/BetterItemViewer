@@ -16,6 +16,7 @@ import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.blocktype.config.BlockType;
 import com.hypixel.hytale.server.core.asset.type.item.config.*;
 import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
+import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
@@ -25,7 +26,7 @@ import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
-import com.hypixel.hytale.server.core.plugin.PluginManager;
+import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.ui.Anchor;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
@@ -124,16 +125,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.giveItem != null) {
             this.sendUpdate(commandBuilder, eventBuilder, false);
-            if (!ref.isValid()) return;
-            Player player = store.getComponent(ref, Player.getComponentType());
-            if (player == null) return;
-            GameMode gameMode = player.getGameMode();
-            if (gameMode != GameMode.Creative) return;
-            Item item = Item.getAssetMap().getAsset(data.giveItem);
-            if (item == null) return;
-            ItemStack stack = new ItemStack(data.giveItem);
-            ItemContainer itemContainer = player.getInventory().getCombinedHotbarFirst();
-            itemContainer.addItemStack(stack);
+            giveItem(ref, store, data.giveItem, false);
+        }
+
+        if (data.giveItemStack != null) {
+            this.sendUpdate(commandBuilder, eventBuilder, false);
+            giveItem(ref, store, data.giveItemStack, true);
         }
 
         if (data.recipeInPage != null) {
@@ -218,6 +215,28 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
+    }
+
+    private void giveItem(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, String itemId, boolean maxStack) {
+        if (!ref.isValid()) return;
+        Player player = store.getComponent(ref, Player.getComponentType());
+        PermissionsModule perms = PermissionsModule.get();
+        if (player == null) return;
+        UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
+        if (uuidComponent == null) return;
+        Set<String> groups = perms.getGroupsForUser(uuidComponent.getUuid());
+        GameMode gameMode = player.getGameMode();
+        if (gameMode != GameMode.Creative && !groups.contains("OP")) {
+            return;
+        }
+        Item item = Item.getAssetMap().getAsset(itemId);
+        if (item == null) return;
+        ItemStack stack = new ItemStack(itemId);
+        if (maxStack) {
+            stack = stack.withQuantity(item.getMaxStack());
+        }
+        ItemContainer itemContainer = player.getInventory().getCombinedHotbarFirst();
+        itemContainer.addItemStack(stack);
     }
 
     private void buildList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
@@ -367,6 +386,9 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         addToolInfo(selectedItem, commandBuilder);
         addNpcLoot(selectedItem, commandBuilder);
         addRecipes(settings, selectedItem, commandBuilder, eventBuilder);
+
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveItemButton", EventData.of(KEY_GIVE_ITEM, selectedItem.getId()));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveItemStackButton", EventData.of(KEY_GIVE_ITEM_STACK, selectedItem.getId()));
 
         commandBuilder.set("#ItemStats.Visible", true);
     }
@@ -670,6 +692,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
         static final String KEY_ITEM = "SelectItem";
         static final String KEY_GIVE_ITEM = "GiveItem";
+        static final String KEY_GIVE_ITEM_STACK = "GiveItemStack";
         static final String KEY_LIST_PAGE = "ListPage";
         static final String KEY_RECIPE_IN_PAGE = "RecipeInPage";
         static final String KEY_RECIPE_OUT_PAGE = "RecipeOutPage";
@@ -683,6 +706,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
+            .addField(new KeyedCodec<>(KEY_GIVE_ITEM_STACK, Codec.STRING), (guiData, s) -> guiData.giveItemStack = s, guiData -> guiData.giveItemStack)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_IN_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeInPage = s, guiData -> guiData.recipeInPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_OUT_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeOutPage = s, guiData -> guiData.recipeOutPage)
@@ -690,6 +714,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         private String selectItem;
         private String giveItem;
+        private String giveItemStack;
         private String searchQuery;
         private String modFilter;
         private String categoryFilter;

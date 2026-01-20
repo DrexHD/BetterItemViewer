@@ -169,6 +169,31 @@ $C.@PageOverlay {
                   TextColor: #aaaaaa
                 );
               }
+
+              Group {
+                LayoutMode: Left;
+
+                TextButton #GiveItemButton {
+                  TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+                  TooltipText: "You need to be OP, or in creative to use this!";
+                  Anchor: (Width: 90, Height: 24);
+                  Text: "Give Item";
+                  Style: $C.@SmallSecondaryTextButtonStyle;
+                }
+
+                Group {
+                  Padding: (Left: 8);
+                }
+
+                TextButton #GiveItemStackButton {
+                  TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+                  TooltipText: "You need to be OP, or in creative to use this!";
+                  Anchor: (Width: 100, Height: 24);
+                  Text: "Give Stack";
+                  Style: $C.@SmallSecondaryTextButtonStyle;
+                }
+              }
+
             }
           }
 
