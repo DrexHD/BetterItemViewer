@@ -1,4 +1,4 @@
-package me.drex.betteritemviewer;
+package me.drex.betteritemviewer.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.gui.BetterItemViewerGui;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 
@@ -27,7 +28,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
 
     private final OptionalArg<String> argument;
 
-    protected BetterItemViewerCommand() {
+    public BetterItemViewerCommand() {
         super("betteritemviewer", "Displays tools, weapons and other items and shows detailed information, like tool stats or weapon damage.", false);
         this.addAliases("biv", "jei");
         var arg = new SingleArgumentType<String>("Default Search", "Opens the screen with this text in the search field", "sword", "pickaxe") {

@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
 import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
 import com.hypixel.hytale.server.core.universe.world.events.StartWorldEvent;
@@ -27,6 +28,10 @@ import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.systems.PositionCacheSystems;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import it.unimi.dsi.fastutil.Pair;
+import me.drex.betteritemviewer.command.BetterItemViewerCommand;
+import me.drex.betteritemviewer.component.BetterItemViewerComponent;
+import me.drex.betteritemviewer.config.BetterItemViewerConfig;
+import me.drex.betteritemviewer.interaction.OpenBetterItemViewerInteraction;
 
 import javax.annotation.Nonnull;
 import java.util.*;
@@ -69,6 +74,8 @@ public class Main extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, Main::onRecipeLoad);
         this.getEventRegistry().registerGlobal(StartWorldEvent.class, Main::onStartWorld);
         this.getEntityStoreRegistry().registerSystem(new CheckKeybindSystem());
+        Interaction.CODEC.register("OpenBetterItemViewer", OpenBetterItemViewerInteraction.class, OpenBetterItemViewerInteraction.CODEC);
+
     }
 
     private static void onRecipeLoad(LoadedAssetsEvent<String, CraftingRecipe, DefaultAssetMap<String, CraftingRecipe>> event) {

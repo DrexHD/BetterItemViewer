@@ -1,4 +1,4 @@
-package me.drex.betteritemviewer;
+package me.drex.betteritemviewer.config;
 
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;

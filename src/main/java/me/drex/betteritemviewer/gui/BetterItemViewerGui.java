@@ -39,7 +39,7 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import me.drex.betteritemviewer.BetterItemViewerComponent;
+import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.Main;
 
 import javax.annotation.Nonnull;
