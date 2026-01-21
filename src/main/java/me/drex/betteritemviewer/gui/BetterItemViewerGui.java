@@ -23,10 +23,14 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCu
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
+import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
+import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageClass;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.ui.Anchor;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
@@ -37,6 +41,7 @@ import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
@@ -445,6 +450,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#ItemTitle #ItemId.TextSpans", Message.raw("ID: " + selectedItem.getId()));
         addDescription(selectedItem, commandBuilder);
         addGeneral(selectedItem, commandBuilder);
+        addArmorInfo(selectedItem, commandBuilder);
         addWeaponInfo(selectedItem, commandBuilder);
         addToolInfo(selectedItem, commandBuilder);
         addNpcLoot(selectedItem, commandBuilder);
@@ -522,6 +528,65 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
     }
 
+    private void addArmorInfo(Item item, UICommandBuilder commandBuilder) {
+        ItemArmor armor = item.getArmor();
+        if (armor == null) return;
+
+        Map<DamageCause, StaticModifier[]> damageEnhancementValues = armor.getDamageEnhancementValues();
+        Map<DamageCause, StaticModifier[]> damageResistanceValues = armor.getDamageResistanceValues();
+        Map<DamageClass, StaticModifier[]> damageClassEnhancement = armor.getDamageClassEnhancement();
+        Int2ObjectMap<StaticModifier[]> statModifiers = armor.getStatModifiers();
+
+        int i = 0;
+        commandBuilder.appendInline("#ItemStats", "Group #Armors {LayoutMode: Top; Padding: (Top: 12);}");
+        commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+        commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw("Armor").bold(true));
+        i++;
+
+        if (statModifiers != null) {
+            for (Int2ObjectMap.Entry<StaticModifier[]> entry : statModifiers.int2ObjectEntrySet()) {
+                int index = entry.getIntKey();
+                EntityStatType entityStatType = EntityStatType.getAssetMap().getAsset(index);
+                if (entityStatType == null) continue;
+                for (StaticModifier staticModifier : entry.getValue()) {
+                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(entityStatType.getId() + ": +" + formatStaticModifier(staticModifier)));
+                    i++;
+                }
+            }
+        }
+
+        if (damageResistanceValues != null) {
+            for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageResistanceValues.entrySet()) {
+                for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
+                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(damageCauseEntry.getKey().getId() + " Resistance: +" + formatStaticModifier(staticModifier)));
+                    i++;
+                }
+            }
+        }
+
+        if (damageClassEnhancement != null) {
+            for (Map.Entry<DamageClass, StaticModifier[]> damageClassEntry : damageClassEnhancement.entrySet()) {
+                for (StaticModifier staticModifier : damageClassEntry.getValue()) {
+                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(firstLetterUppercase(damageClassEntry.getKey().name()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
+                    i++;
+                }
+            }
+        }
+
+        if (damageEnhancementValues != null) {
+            for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageEnhancementValues.entrySet()) {
+                for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
+                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
+                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(firstLetterUppercase(damageCauseEntry.getKey().getId()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
+                    i++;
+                }
+            }
+        }
+    }
+
     private void addWeaponInfo(Item item, UICommandBuilder commandBuilder) {
         // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
         String initialDamageInteraction = null;
@@ -560,7 +625,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 baseDamageRaw.forEach((damageCause, damage) -> {
                     String value;
                     if (randomPercentageModifier > 0) {
-                        value = String.format("%.0f ±%.0f%%", damage, randomPercentageModifier * 100);
+                        value = String.format("%.0f ±%.0f%%", damage, (randomPercentageModifier * 100));
                     } else {
                         value = String.format("%.0f", damage);
                     }
@@ -758,7 +823,24 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 i++;
             }
         }
+    }
 
+    private static String firstLetterUppercase(String input) {
+        String result = input.toLowerCase();
+        if (!result.isEmpty()) {
+            return result.substring(0, 1).toUpperCase() + result.substring(1);
+        }
+        return result;
+    }
+
+    private static String formatStaticModifier(StaticModifier staticModifier) {
+        StaticModifier.CalculationType calculationType = staticModifier.getCalculationType();
+        String value = "";
+        switch (calculationType) {
+            case ADDITIVE -> value = String.format("%.0f", staticModifier.getAmount());
+            case MULTIPLICATIVE -> value = String.format("%.0f", staticModifier.getAmount() * 100) + "%";
+        }
+        return value;
     }
 
     public static class GuiData {
