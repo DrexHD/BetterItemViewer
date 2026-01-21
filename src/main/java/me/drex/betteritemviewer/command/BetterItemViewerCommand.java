@@ -14,6 +14,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.gui.BetterItemViewerGui;
 import org.checkerframework.checker.nullness.compatqual.NullableDecl;
@@ -21,6 +22,7 @@ import org.checkerframework.checker.nullness.compatqual.NullableDecl;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 import static com.hypixel.hytale.server.core.command.commands.player.inventory.InventorySeeCommand.MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD;
 
@@ -53,15 +55,18 @@ public class BetterItemViewerCommand extends AbstractCommand {
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
                 return CompletableFuture.runAsync(() -> {
-                    PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-                    if (playerRefComponent == null) return;
-                    BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
-                    if (context.get(this.argument) != null) {
-                        // TODO clear state
-                        settings.searchQuery = context.get(this.argument);
+                    try {
+                        PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+                        if (playerRefComponent == null) return;
+                        BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+                        if (context.get(this.argument) != null) {
+                            // TODO clear state
+                            settings.searchQuery = context.get(this.argument);
+                        }
+                        player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings));
+                    } catch (Exception e) {
+                        Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Error while opening BetterItemViewerGui");
                     }
-                    player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings));
-
                 }, world);
             } else {
                 context.sendMessage(MESSAGE_COMMANDS_ERRORS_PLAYER_NOT_IN_WORLD);

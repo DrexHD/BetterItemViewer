@@ -361,7 +361,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (settings.selectedPage >= pages) {
             settings.selectedPage = 0;
         } else if (settings.selectedPage < 0) {
-            settings.selectedPage = pages - 1;
+            settings.selectedPage = Math.max(0, pages - 1);
         }
 
         items = items.stream().skip((long) settings.selectedPage * entriesPerPage).limit(entriesPerPage).toList();
