@@ -283,10 +283,8 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 return true;
             }
 
-            if (!settings.modFilter.isEmpty()) {
-                if (!modItems.contains(item.getId())) {
-                    return true;
-                }
+            if (modItems != null && !modItems.contains(item.getId())) {
+                return true;
             }
 
             if (!settings.categoryFilter.isEmpty()) {
