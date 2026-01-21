@@ -1,0 +1,19 @@
+Group #General {
+  LayoutMode: Top;
+  Padding: (Top: 12);
+
+  Label #StatsSectionTitle {
+    Style: (
+      FontSize: 20,
+      TextColor: #ffffff
+    );
+  }
+
+  Label #StatsSectionDescription {
+    Style: (
+      FontSize: 16,
+      TextColor: #aaaaaa,
+      Wrap: true
+    );
+  }
+}

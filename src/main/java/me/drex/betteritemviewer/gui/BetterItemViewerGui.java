@@ -448,12 +448,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#ItemTitle #ItemIcon.ItemId", selectedItem.getId());
         commandBuilder.set("#ItemTitle #ItemName.TextSpans", Message.translation(selectedItem.getTranslationKey()));
         commandBuilder.set("#ItemTitle #ItemId.TextSpans", Message.raw("ID: " + selectedItem.getId()));
-        addDescription(selectedItem, commandBuilder);
-        addGeneral(selectedItem, commandBuilder);
-        addArmorInfo(selectedItem, commandBuilder);
-        addWeaponInfo(selectedItem, commandBuilder);
-        addToolInfo(selectedItem, commandBuilder);
-        addNpcLoot(selectedItem, commandBuilder);
+        AtomicInteger index = new AtomicInteger(0);
+
+        addDescription(selectedItem, commandBuilder, index);
+        addGeneral(selectedItem, commandBuilder, index);
+        addArmorInfo(selectedItem, commandBuilder, index);
+        addWeaponInfo(selectedItem, commandBuilder, index);
+        addToolInfo(selectedItem, commandBuilder, index);
+        addNpcLoot(selectedItem, commandBuilder, index);
         addRecipes(settings, selectedItem, commandBuilder, eventBuilder);
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveItemButton", EventData.of(KEY_GIVE_ITEM, selectedItem.getId()));
@@ -494,64 +496,70 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
     }
 
-    private void addDescription(Item item, UICommandBuilder commandBuilder) {
+    private void addDescription(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         String description = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getDescriptionTranslationKey());
         if (description == null) return;
-
-        int i = 0;
-        commandBuilder.appendInline("#ItemStats", "Group #Description {LayoutMode: Top; Padding: (Top: 12);}");
-        commandBuilder.appendInline("#Description", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-        commandBuilder.set("#Description[" + i + "].TextSpans", Message.raw("Description").bold(true));
-        i++;
-
-        commandBuilder.appendInline("#Description", "Label {Style: (FontSize: 16, TextColor: #aaaaaa, Wrap: true);}");
-        commandBuilder.set("#Description[" + i + "].TextSpans", Message.translation(item.getDescriptionTranslationKey()));
-        i++;
+        addStatsSection(commandBuilder, index,"Description", Message.translation(item.getDescriptionTranslationKey()));
     }
 
-    private void addToolInfo(Item item, UICommandBuilder commandBuilder) {
+    private void addGeneral(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
+        List<Message> lines = new ArrayList<>();
+
+        double maxDurability = item.getMaxDurability();
+        if (maxDurability > 0) {
+            lines.add(Message.raw("Durability: " + String.format("%.0f", maxDurability)));
+        }
+
+        lines.add(Message.raw("Max Stack: " + String.format("%.0f", maxDurability)));
+
+        int qualityIndex = item.getQualityIndex();
+        ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+        if (quality != null) {
+            int rgb = ColorParseUtil.colorToARGBInt(quality.getTextColor());
+            lines.add(Message.raw("Item Quality: ").insert(Message.translation(quality.getLocalizationKey()).color(new Color(rgb))));
+        }
+
+        String assetPackId = Item.getAssetMap().getAssetPack(item.getId());
+        if (assetPackId != null) {
+            AssetPack assetPack = AssetModule.get().getAssetPack(assetPackId);
+            if (assetPack != null) {
+                PluginManifest manifest = assetPack.getManifest();
+                lines.add((Message.raw("Mod: ").insert(Message.raw(manifest.getName()))));
+            }
+        }
+        addStatsSection(commandBuilder, index, "General", lines);
+    }
+
+    private void addToolInfo(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         ItemTool tool = item.getTool();
         if (tool == null) return;
         ItemToolSpec[] specs = tool.getSpecs();
         if (specs == null) return;
 
-        int i = 0;
-        commandBuilder.appendInline("#ItemStats", "Group #Tools {LayoutMode: Top; Padding: (Top: 12);}");
-        commandBuilder.appendInline("#Tools", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-        commandBuilder.set("#Tools[" + i + "].TextSpans", Message.raw("Breaking Speed").bold(true));
-        i++;
-
+        List<Message> lines = new ArrayList<>();
         for (ItemToolSpec spec : specs) {
-            commandBuilder.appendInline("#Tools", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-            commandBuilder.set("#Tools[" + i + "].TextSpans", Message.raw(spec.getGatherType() + ": " + String.format("%.2f", spec.getPower())));
-            i++;
+            lines.add(Message.raw(spec.getGatherType() + ": " + String.format("%.2f", spec.getPower())));
         }
+        addStatsSection(commandBuilder, index, "Breaking Speed", lines);
     }
 
-    private void addArmorInfo(Item item, UICommandBuilder commandBuilder) {
+    private void addArmorInfo(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         ItemArmor armor = item.getArmor();
         if (armor == null) return;
+
+        List<Message> lines = new ArrayList<>();
 
         Map<DamageCause, StaticModifier[]> damageEnhancementValues = armor.getDamageEnhancementValues();
         Map<DamageCause, StaticModifier[]> damageResistanceValues = armor.getDamageResistanceValues();
         Map<DamageClass, StaticModifier[]> damageClassEnhancement = armor.getDamageClassEnhancement();
         Int2ObjectMap<StaticModifier[]> statModifiers = armor.getStatModifiers();
 
-        int i = 0;
-        commandBuilder.appendInline("#ItemStats", "Group #Armors {LayoutMode: Top; Padding: (Top: 12);}");
-        commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-        commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw("Armor").bold(true));
-        i++;
-
         if (statModifiers != null) {
             for (Int2ObjectMap.Entry<StaticModifier[]> entry : statModifiers.int2ObjectEntrySet()) {
-                int index = entry.getIntKey();
-                EntityStatType entityStatType = EntityStatType.getAssetMap().getAsset(index);
+                EntityStatType entityStatType = EntityStatType.getAssetMap().getAsset(entry.getIntKey());
                 if (entityStatType == null) continue;
                 for (StaticModifier staticModifier : entry.getValue()) {
-                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(entityStatType.getId() + ": +" + formatStaticModifier(staticModifier)));
-                    i++;
+                    lines.add(Message.raw(entityStatType.getId() + ": +" + formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -559,9 +567,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (damageResistanceValues != null) {
             for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageResistanceValues.entrySet()) {
                 for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
-                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(damageCauseEntry.getKey().getId() + " Resistance: +" + formatStaticModifier(staticModifier)));
-                    i++;
+                    lines.add(Message.raw(damageCauseEntry.getKey().getId() + " Resistance: +" + formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -569,9 +575,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (damageClassEnhancement != null) {
             for (Map.Entry<DamageClass, StaticModifier[]> damageClassEntry : damageClassEnhancement.entrySet()) {
                 for (StaticModifier staticModifier : damageClassEntry.getValue()) {
-                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(firstLetterUppercase(damageClassEntry.getKey().name()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
-                    i++;
+                    lines.add(Message.raw(firstLetterUppercase(damageClassEntry.getKey().name()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -579,16 +583,18 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (damageEnhancementValues != null) {
             for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageEnhancementValues.entrySet()) {
                 for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
-                    commandBuilder.appendInline("#Armors", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-                    commandBuilder.set("#Armors[" + i + "].TextSpans", Message.raw(firstLetterUppercase(damageCauseEntry.getKey().getId()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
-                    i++;
+                    lines.add(Message.raw(firstLetterUppercase(damageCauseEntry.getKey().getId()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
                 }
             }
         }
+        if (lines.isEmpty()) return;
+        addStatsSection(commandBuilder, index, "Armor", lines);
     }
 
-    private void addWeaponInfo(Item item, UICommandBuilder commandBuilder) {
+    private void addWeaponInfo(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
+        List<Message> lines = new ArrayList<>();
+
         String initialDamageInteraction = null;
         Map<String, String> interactionVars = item.getInteractionVars();
         for (String primaryInteractionVar : PRIMARY_INTERACTION_VARS) {
@@ -603,12 +609,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
         if (interaction instanceof DamageEntityInteraction damageEntityInteraction) {
-            AtomicInteger i = new AtomicInteger();
-            commandBuilder.appendInline("#ItemStats", "Group #Weapons {LayoutMode: Top; Padding: (Top: 12);}");
-            commandBuilder.appendInline("#Weapons", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-            commandBuilder.set("#Weapons[" + i + "].TextSpans", Message.raw("Weapon").bold(true));
-
-            i.getAndIncrement();
             try {
                 Field damageCalculatorField = DamageEntityInteraction.class.getDeclaredField("damageCalculator");
                 damageCalculatorField.setAccessible(true);
@@ -629,26 +629,21 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                     } else {
                         value = String.format("%.0f", damage);
                     }
-                    commandBuilder.appendInline("#Weapons", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-                    commandBuilder.set("#Weapons[" + i + "].TextSpans", Message.raw(damageCause + ": " + value));
-                    i.getAndIncrement();
+                    lines.add(Message.raw(damageCause + ": " + value));
                 });
 
             } catch (NoSuchFieldException | IllegalAccessException e) {
                 throw new RuntimeException(e);
             }
         }
-
+        if (lines.isEmpty()) return;
+        addStatsSection(commandBuilder, index, "Weapon", lines);
     }
 
-    private void addNpcLoot(Item item, UICommandBuilder commandBuilder) {
+    private void addNpcLoot(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
         if (itemDrops == null) return;
-        AtomicInteger i = new AtomicInteger();
-        commandBuilder.appendInline("#ItemStats", "Group #Loot {LayoutMode: Top; Padding: (Top: 12);}");
-        commandBuilder.appendInline("#Loot", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-        commandBuilder.set("#Loot[" + i + "].TextSpans", Message.raw("Mob Loot").bold(true));
-        i.getAndIncrement();
+        List<Message> lines = new ArrayList<>();
 
         itemDrops.forEach((role, drop) -> {
 
@@ -658,10 +653,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             if (Objects.equals(min, max)) {
                 value = String.valueOf(min);
             }
-            commandBuilder.appendInline("#Loot", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-            commandBuilder.set("#Loot[" + i + "].TextSpans", Message.translation(role).insert(": " + value));
-            i.getAndIncrement();
+            lines.add(Message.translation(role).insert(": " + value));
         });
+
+        if (lines.isEmpty()) return;
+        addStatsSection(commandBuilder, index, "Mob Loot", lines);
     }
 
     private void addRecipes(BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
@@ -786,43 +782,26 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
     }
 
-    private void addGeneral(Item item, UICommandBuilder commandBuilder) {
-        double maxDurability = item.getMaxDurability();
-        int i = 0;
-        commandBuilder.appendInline("#ItemStats", "Group #General {LayoutMode: Top; Padding: (Top: 12);}");
-        commandBuilder.appendInline("#General", "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-        commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("General").bold(true));
-        i++;
+    private void addStatsSection(UICommandBuilder commandBuilder, AtomicInteger index, String title, Message stats) {
+        commandBuilder.append("#ItemStats", "Pages/Drex_BetterItemViewer_StatsSection.ui");
+        commandBuilder.set("#ItemStats[" + index.get() + "] #StatsSectionTitle.TextSpans", Message.raw(title));
 
-        if (maxDurability > 0) {
-            commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-            commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Durability: " + String.format("%.0f", maxDurability)));
-            i++;
-        }
+        commandBuilder.set("#ItemStats[" + index.get() + "] #StatsSectionDescription.TextSpans", stats);
+        index.getAndIncrement();
+    }
 
-        commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-        commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Max Stack: " + item.getMaxStack()));
-        i++;
-
-        int qualityIndex = item.getQualityIndex();
-        ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
-        if (quality != null) {
-            commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-            int rgb = ColorParseUtil.colorToARGBInt(quality.getTextColor());
-            commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Item Quality: ").insert(Message.translation(quality.getLocalizationKey()).color(new Color(rgb))));
-            i++;
-        }
-
-        String assetPackId = Item.getAssetMap().getAssetPack(item.getId());
-        if (assetPackId != null) {
-            AssetPack assetPack = AssetModule.get().getAssetPack(assetPackId);
-            if (assetPack != null) {
-                PluginManifest manifest = assetPack.getManifest();
-                commandBuilder.appendInline("#General", "Label {Style: (FontSize: 16, TextColor: #aaaaaa);}");
-                commandBuilder.set("#General[" + i + "].TextSpans", Message.raw("Mod: ").insert(Message.raw(manifest.getName())));
-                i++;
+    private void addStatsSection(UICommandBuilder commandBuilder, AtomicInteger index, String title, List<Message> lines) {
+        Message stats = Message.empty();
+        boolean first = true;
+        for (Message line : lines) {
+            if (first) {
+                first = false;
+            } else {
+                stats.insert("\n");
             }
+            stats.insert(line);
         }
+        addStatsSection(commandBuilder, index, title, stats);
     }
 
     private static String firstLetterUppercase(String input) {
