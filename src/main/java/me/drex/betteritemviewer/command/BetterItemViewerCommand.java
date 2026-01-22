@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.command.system.ParseResult;
 import com.hypixel.hytale.server.core.command.system.arguments.system.OptionalArg;
 import com.hypixel.hytale.server.core.command.system.arguments.types.SingleArgumentType;
 import com.hypixel.hytale.server.core.entity.entities.Player;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -51,6 +52,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
         CommandSender sender = context.sender();
         if (sender instanceof Player player) {
             Ref<EntityStore> ref = player.getReference();
+            Inventory inventory = player.getInventory();
             if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
@@ -63,7 +65,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
                             // TODO clear state
                             settings.searchQuery = context.get(this.argument);
                         }
-                        player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings));
+                        player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings, inventory));
                     } catch (Exception e) {
                         Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Error while opening BetterItemViewerGui");
                     }

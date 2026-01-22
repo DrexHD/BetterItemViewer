@@ -33,7 +33,7 @@ public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
         if (player != null && playerRef != null) {
             BetterItemViewerComponent settings = buffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
 
-            player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss, settings));
+            player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss, settings, player.getInventory()));
         }
     }
 }

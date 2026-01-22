@@ -26,13 +26,22 @@ Group {
     }
 
     Group {
-      Padding: (Left: 4);
+      Padding: (Left: 8);
+      LayoutMode: Top;
+
       Label #ItemName {
         Style: (
           Alignment: Center,
-          FontSize: 20,
-          TextColor: #aaaaaa,
+          FontSize: 18,
+          TextColor: #dddddd,
           RenderBold: true
+        );
+      }
+
+      Label #ItemQuantity {
+        Style: (
+          FontSize: 15,
+          TextColor: #aaaaaa
         );
       }
     }

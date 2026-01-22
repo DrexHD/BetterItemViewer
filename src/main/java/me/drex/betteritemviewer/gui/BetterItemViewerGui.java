@@ -20,6 +20,7 @@ import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
+import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
@@ -90,10 +91,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }};
 
     private final BetterItemViewerComponent component;
+    private final Inventory inventory;
 
-    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, BetterItemViewerComponent component) {
+    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, BetterItemViewerComponent component, Inventory inventory) {
         super(playerRef, lifetime, GuiData.CODEC);
         this.component = component;
+        this.inventory = inventory;
     }
 
     @Override
@@ -499,7 +502,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     private void addDescription(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         String description = I18nModule.get().getMessage(this.playerRef.getLanguage(), item.getDescriptionTranslationKey());
         if (description == null) return;
-        addStatsSection(commandBuilder, index,"Description", Message.translation(item.getDescriptionTranslationKey()));
+        addStatsSection(commandBuilder, index, "Description", Message.translation(item.getDescriptionTranslationKey()));
     }
 
     private void addGeneral(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
@@ -741,7 +744,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i.getAndIncrement();
 
         for (MaterialQuantity input : recipe.getInput()) {
-            addMaterialQuantity(input, commandBuilder, eventBuilder, tag, i);
+            addMaterialQuantity(input, commandBuilder, eventBuilder, tag, true, i);
         }
 
         commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #ffffff);}");
@@ -749,35 +752,65 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i.getAndIncrement();
 
         for (MaterialQuantity output : recipe.getOutputs()) {
-            addMaterialQuantity(output, commandBuilder, eventBuilder, tag, i);
+            addMaterialQuantity(output, commandBuilder, eventBuilder, tag, false, i);
         }
     }
 
-    private void addMaterialQuantity(MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, AtomicInteger i) {
+    private void addMaterialQuantity(MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, boolean countInventory, AtomicInteger i) {
         String itemId = materialQuantity.getItemId();
         String resourceTypeId = materialQuantity.getResourceTypeId();
 
-        String quantity = materialQuantity.getQuantity() + "x ";
         if (itemId != null) {
             Item inputItem = Item.getAssetMap().getAsset(itemId);
             if (inputItem == null) return;
 
+            int count = inventory.getCombinedEverything().countItemStacks(itemStack -> itemStack.getItemId().equals(itemId));
+
             commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RecipeEntry.ui");
+
             commandBuilder.set(tag + "[" + i + "] #ItemIcon.ItemId", itemId);
             commandBuilder.set(tag + "[" + i + "] #ItemIcon.Visible", true);
-            commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(quantity).insert(Message.translation(inputItem.getTranslationKey())));
+            String value = countInventory ? count + "/" + materialQuantity.getQuantity() + " " : materialQuantity.getQuantity() + " ";
+            commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.translation(inputItem.getTranslationKey()));
+            commandBuilder.set(tag + "[" + i + "] #ItemQuantity.TextSpans", Message.raw(value));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_ITEM, itemId));
+            if (countInventory) {
+                if (count < materialQuantity.getQuantity()) {
+                    commandBuilder.set(tag + "[" + i + "] #ItemQuantity.Style.TextColor", "#ff2222aa");
+                } else {
+                    commandBuilder.set(tag + "[" + i + "] #ItemQuantity.Style.TextColor", "#22ff22aa");
+                }
+            }
+
             i.getAndIncrement();
         } else if (resourceTypeId != null) {
             ResourceType resourceType = ResourceType.getAssetMap().getAsset(resourceTypeId);
             if (resourceType == null) return;
 
+            int count = inventory.getCombinedEverything().countItemStacks(itemStack -> {
+                ItemResourceType[] resourceTypes = itemStack.getItem().getResourceTypes();
+                if (resourceTypes != null) {
+                    for (ItemResourceType type : resourceTypes) {
+                        if (type.id != null && type.id.equals(resourceTypeId)) return true;
+                    }
+                }
+                return false;
+            });
+
             commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RecipeEntry.ui");
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.AssetPath", resourceType.getIcon());
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.Visible", true);
-            commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(quantity).insert(Message.raw(resourceType.getName())));
+            String value = countInventory ? count + "/" + materialQuantity.getQuantity() + " " : materialQuantity.getQuantity() + " ";
+            commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(resourceType.getName()));
+            commandBuilder.set(tag + "[" + i + "] #ItemQuantity.TextSpans", Message.raw(value));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_SET_SEARCH, "#" + resourceTypeId));
-
+            if (countInventory) {
+                if (count < materialQuantity.getQuantity()) {
+                    commandBuilder.set(tag + "[" + i + "] #ItemQuantity.Style.TextColor", "#ff2222aa");
+                } else {
+                    commandBuilder.set(tag + "[" + i + "] #ItemQuantity.Style.TextColor", "#22ff22aa");
+                }
+            }
             i.getAndIncrement();
         }
     }
