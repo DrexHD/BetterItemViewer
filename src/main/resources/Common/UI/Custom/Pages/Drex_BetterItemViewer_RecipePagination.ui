@@ -8,7 +8,10 @@ Group #PaginationControls {
   TextButton #PrevPageButton {
     Anchor: (Width: 200, Height: 24);
     Text: "Prev";
-    Style: $C.@TertiaryTextButtonStyle;
+    Style: (
+      ...$C.@TertiaryTextButtonStyle,
+      Sounds: $C.@ButtonSounds
+    );
     Background: #1a1a1a(0.6);
     Padding: (Full: 8);
   }
@@ -28,7 +31,10 @@ Group #PaginationControls {
   TextButton #NextPageButton {
     Anchor: (Width: 200, Height: 24);
     Text: "Next";
-    Style: $C.@TertiaryTextButtonStyle;
+    Style: (
+      ...$C.@TertiaryTextButtonStyle,
+      Sounds: $C.@ButtonSounds
+    );
     Background: #1a1a1a(0.6);
     Padding: (Full: 8);
   }

@@ -210,7 +210,10 @@ $C.@PageOverlay {
                   TooltipText: "You need to be OP, or in creative to use this!";
                   Anchor: (Width: 90, Height: 24);
                   Text: "Give Item";
-                  Style: $C.@SmallSecondaryTextButtonStyle;
+                  Style: (
+                    ...$C.@SmallSecondaryTextButtonStyle,
+                    Sounds: $C.@ButtonSounds
+                  );
                 }
 
                 Group {
@@ -222,7 +225,10 @@ $C.@PageOverlay {
                   TooltipText: "You need to be OP, or in creative to use this!";
                   Anchor: (Width: 100, Height: 24);
                   Text: "Give Stack";
-                  Style: $C.@SmallSecondaryTextButtonStyle;
+                  Style: (
+                    ...$C.@SmallSecondaryTextButtonStyle,
+                    Sounds: $C.@ButtonSounds
+                  );
                 }
               }
 
