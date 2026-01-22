@@ -10,6 +10,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.Main;
 
 import javax.annotation.Nullable;
+import java.util.Objects;
 
 public class BetterItemViewerComponent implements Component<EntityStore> {
 
@@ -66,6 +67,19 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     }
 
     private BetterItemViewerComponent() {
+    }
+
+    public void clearFilters() {
+        this.searchQuery = "";
+        this.modFilter = "";
+        this.categoryFilter = "";
+        this.craftableFilter = BetterItemViewerComponent.Filter.ALL;
+        this.sortMode = "Item Name (Ascending)";
+        this.selectedPage = 0;
+    }
+
+    public boolean hasFilters() {
+        return !this.searchQuery.isEmpty() || !this.modFilter.isEmpty() || !this.categoryFilter.isEmpty() || this.craftableFilter != BetterItemViewerComponent.Filter.ALL || !Objects.equals(sortMode, "Item Name (Ascending)");
     }
 
     public BetterItemViewerComponent(

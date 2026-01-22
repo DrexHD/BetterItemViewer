@@ -89,6 +89,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 }).thenComparingInt(Item::getQualityIndex).reversed()
             );
         }};
+    private static final String RESET_FILTERS_ACTION = "ResetFilters";
 
     private final BetterItemViewerComponent component;
     private final Inventory inventory;
@@ -102,15 +103,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
-        commandBuilder.set("#SearchInput.Value", component.searchQuery);
-        commandBuilder.set("#ModFilter.Value", component.modFilter);
-        commandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
-        commandBuilder.set("#SortMode.Value", component.sortMode);
-        commandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
-        commandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
-        commandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
-        commandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
-        commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
+        setInputValues(commandBuilder);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvager #CheckBox", EventData.of(KEY_SHOW_SALVAGER_RECIPES, "#ShowSalvager #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
@@ -120,7 +113,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     // TODO fuel
-    // TODO show which mod added an item
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull GuiData data) {
         super.handleDataEvent(ref, store, data);
@@ -129,6 +121,15 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         UICommandBuilder commandBuilder = new UICommandBuilder();
         UIEventBuilder eventBuilder = new UIEventBuilder();
+        if (data.action != null) {
+            if (data.action.equals(RESET_FILTERS_ACTION)) {
+                settings.clearFilters();
+                setInputValues(commandBuilder);
+                this.buildList(settings, commandBuilder, eventBuilder);
+                this.sendUpdate(commandBuilder, eventBuilder, false);
+            }
+        }
+
         if (data.selectItem != null) {
             settings.selectedItem = data.selectItem;
             this.updateStats(settings, commandBuilder, eventBuilder);
@@ -252,6 +253,18 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             this.buildList(settings, commandBuilder, eventBuilder);
             this.sendUpdate(commandBuilder, eventBuilder, false);
         }
+    }
+
+    private void setInputValues(UICommandBuilder commandBuilder) {
+        commandBuilder.set("#SearchInput.Value", component.searchQuery);
+        commandBuilder.set("#ModFilter.Value", component.modFilter);
+        commandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
+        commandBuilder.set("#SortMode.Value", component.sortMode);
+        commandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
+        commandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
+        commandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
+        commandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
+        commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
     }
 
     private void giveItem(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, String itemId, boolean maxStack) {
@@ -423,11 +436,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         commandBuilder.set("#GridLayout.Entries", gridLayouts);
 
+        commandBuilder.set("#ResetFiltersButton.Disabled", !settings.hasFilters());
+
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ModFilter", EventData.of(KEY_MOD_FILTER, "#ModFilter.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CategoryFilter", EventData.of(KEY_CATEGORY_FILTER, "#CategoryFilter.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FilterCraftable", EventData.of(KEY_CRAFTABLE_FILTER, "#FilterCraftable.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#GridLayout", EventData.of(KEY_GRID_LAYOUT, "#GridLayout.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetFiltersButton", EventData.of(KEY_ACTION, RESET_FILTERS_ACTION));
 
         this.updateItemList(settings, items, commandBuilder, eventBuilder);
 
@@ -739,7 +755,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             }
         }
 
-        commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #ffffff);}");
+        commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #aaaaaa);}");
         commandBuilder.set(tag + "[" + i + "].TextSpans", Message.raw("Input"));
         i.getAndIncrement();
 
@@ -747,7 +763,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             addMaterialQuantity(input, commandBuilder, eventBuilder, tag, true, i);
         }
 
-        commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #ffffff);}");
+        commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #aaaaaa);}");
         commandBuilder.set(tag + "[" + i + "].TextSpans", Message.raw("Output"));
         i.getAndIncrement();
 
@@ -803,7 +819,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             String value = countInventory ? count + "/" + materialQuantity.getQuantity() + " " : materialQuantity.getQuantity() + " ";
             commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(resourceType.getName()));
             commandBuilder.set(tag + "[" + i + "] #ItemQuantity.TextSpans", Message.raw(value));
-            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_SET_SEARCH, "#" + resourceTypeId));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_SET_SEARCH, "#" + resourceTypeId).append(KEY_ACTION, RESET_FILTERS_ACTION));
             if (countInventory) {
                 if (count < materialQuantity.getQuantity()) {
                     commandBuilder.set(tag + "[" + i + "] #ItemQuantity.Style.TextColor", "#ff2222aa");
@@ -872,6 +888,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_LIST_PAGE = "ListPage";
         static final String KEY_RECIPE_IN_PAGE = "RecipeInPage";
         static final String KEY_RECIPE_OUT_PAGE = "RecipeOutPage";
+        static final String KEY_ACTION = "Action";
         public static final BuilderCodec<GuiData> CODEC = BuilderCodec.builder(GuiData.class, GuiData::new)
             .addField(new KeyedCodec<>(KEY_SEARCH_QUERY, Codec.STRING), (guiData, s) -> guiData.searchQuery = s, guiData -> guiData.searchQuery)
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
@@ -889,6 +906,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_IN_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeInPage = s, guiData -> guiData.recipeInPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_OUT_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeOutPage = s, guiData -> guiData.recipeOutPage)
+            .addField(new KeyedCodec<>(KEY_ACTION, Codec.STRING), (guiData, s) -> guiData.action = s, guiData -> guiData.action)
             .build();
 
         private String selectItem;
@@ -907,6 +925,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String listPage;
         private String recipeInPage;
         private String recipeOutPage;
+        private String action;
 
     }
 
