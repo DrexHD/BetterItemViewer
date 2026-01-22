@@ -51,7 +51,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public String modFilter = "";
     public String categoryFilter = "";
     public Filter craftableFilter = Filter.ALL;
-    public String sortMode = "Item Name (Ascending)";
+    public String sortMode = "";
     public String selectedItem;
     public int selectedPage = 0;
     public int selectedRecipeInPage = 0;
@@ -74,12 +74,11 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         this.modFilter = "";
         this.categoryFilter = "";
         this.craftableFilter = BetterItemViewerComponent.Filter.ALL;
-        this.sortMode = "Item Name (Ascending)";
         this.selectedPage = 0;
     }
 
     public boolean hasFilters() {
-        return !this.searchQuery.isEmpty() || !this.modFilter.isEmpty() || !this.categoryFilter.isEmpty() || this.craftableFilter != BetterItemViewerComponent.Filter.ALL || !Objects.equals(sortMode, "Item Name (Ascending)");
+        return !this.searchQuery.isEmpty() || !this.modFilter.isEmpty() || !this.categoryFilter.isEmpty() || this.craftableFilter != BetterItemViewerComponent.Filter.ALL;
     }
 
     public BetterItemViewerComponent(

@@ -139,7 +139,10 @@ $C.@PageOverlay {
           TextButton #PrevPageButton {
             Anchor: (Width: 150, Height: 24);
             Text: "Prev";
-            Style: $C.@SecondaryTextButtonStyle;
+            Style: (
+              ...$C.@SecondaryTextButtonStyle,
+              Sounds: $C.@ButtonSounds
+            );
             Background: #1a1a1a(0.6);
             Padding: (Full: 8);
           }
@@ -157,7 +160,10 @@ $C.@PageOverlay {
           TextButton #NextPageButton {
             Anchor: (Width: 150, Height: 24);
             Text: "Next";
-            Style: $C.@SecondaryTextButtonStyle;
+            Style: (
+              ...$C.@SecondaryTextButtonStyle,
+              Sounds: $C.@ButtonSounds
+            );
             Background: #1a1a1a(0.6);
             Padding: (Full: 8);
           }

@@ -69,7 +69,9 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         "Club_Swing_Left_Damage",
         "Spear_Stab_Damage"
     };
-    public static final Function<PlayerRef, Comparator<Item>> DEFAULT_COMPARATOR = playerRef ->
+
+
+    public static final Function<PlayerRef, Comparator<Item>> NAME_COMPARATOR = playerRef ->
         Comparator.comparing(item ->
             Objects.requireNonNullElse(
                 I18nModule.get().getMessage(playerRef.getLanguage(), item.getTranslationKey()),
@@ -77,17 +79,26 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             )
         );
 
+    public static final Function<PlayerRef, Comparator<Item>> CATEGORY_COMPARATOR = playerRef ->
+        Comparator.<Item, String>comparing(item -> {
+            String[] categories = item.getCategories();
+            if (categories == null || categories.length == 0) return "!";
+            else return categories[0];
+        }).thenComparing(NAME_COMPARATOR.apply(playerRef));
+
+    public static final Function<PlayerRef, Comparator<Item>> QUALITY_COMPARATOR = playerRef ->
+        Comparator.<Item>comparingInt(item -> {
+            int qualityIndex = item.getQualityIndex();
+            ItemQuality itemQuality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+            return (itemQuality != null ? itemQuality : ItemQuality.DEFAULT_ITEM_QUALITY).getQualityValue();
+        }).reversed().thenComparing(NAME_COMPARATOR.apply(playerRef));
+
     private static final Map<String, Function<PlayerRef, Comparator<Item>>> COMPARATORS =
         new LinkedHashMap<>() {{
-            put("Item Name (Ascending)", DEFAULT_COMPARATOR);
-            put("Item Name (Descending)", playerRef -> DEFAULT_COMPARATOR.apply(playerRef).reversed());
-            put("Item Quality", _ ->
-                Comparator.<Item>comparingInt(item -> {
-                    int qualityIndex = item.getQualityIndex();
-                    ItemQuality itemQuality = ItemQuality.getAssetMap().getAsset(qualityIndex);
-                    return (itemQuality != null ? itemQuality : ItemQuality.DEFAULT_ITEM_QUALITY).getQualityValue();
-                }).thenComparingInt(Item::getQualityIndex).reversed()
-            );
+            put("Category", CATEGORY_COMPARATOR);
+            put("Name (A-Z)", NAME_COMPARATOR);
+            put("Name (Z-A)", playerRef -> NAME_COMPARATOR.apply(playerRef).reversed());
+            put("Quality", QUALITY_COMPARATOR);
         }};
     private static final String RESET_FILTERS_ACTION = "ResetFilters";
 
@@ -363,7 +374,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             return false;
         });
 
-        Comparator<Item> comparator = COMPARATORS.getOrDefault(settings.sortMode, DEFAULT_COMPARATOR).apply(playerRef);
+        Comparator<Item> comparator = COMPARATORS.getOrDefault(settings.sortMode, CATEGORY_COMPARATOR).apply(playerRef);
         items.sort(comparator);
 
         if (settings.selectedItem == null && !items.isEmpty()) {
