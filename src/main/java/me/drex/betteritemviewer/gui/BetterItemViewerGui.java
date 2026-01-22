@@ -529,7 +529,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             lines.add(Message.raw("Durability: " + String.format("%.0f", maxDurability)));
         }
 
-        lines.add(Message.raw("Max Stack: " + String.format("%.0f", maxDurability)));
+        lines.add(Message.raw("Max Stack: " + item.getMaxStack()));
 
         int qualityIndex = item.getQualityIndex();
         ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
