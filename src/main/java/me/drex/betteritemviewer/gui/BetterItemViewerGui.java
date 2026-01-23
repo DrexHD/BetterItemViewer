@@ -46,6 +46,9 @@ import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.Main;
+import me.drex.betteritemviewer.item.ItemDetails;
+import me.drex.betteritemviewer.item.ItemManager;
+import me.drex.betteritemviewer.item.Range;
 
 import javax.annotation.Nonnull;
 import java.awt.*;
@@ -83,11 +86,23 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             return (itemQuality != null ? itemQuality : ItemQuality.DEFAULT_ITEM_QUALITY).getQualityValue();
         }).reversed().thenComparing(NAME_COMPARATOR.apply(playerRef));
 
+    public static final Function<PlayerRef, Comparator<Item>> WEAPON_DAMAGE = playerRef ->
+        Comparator.<Item>comparingInt(item -> {
+            ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
+            int max = 0;
+            Collection<Range> values = itemDetails.damageInteractions.values();
+            for (Range range : values) {
+                max = Math.max(max, range.max());
+            }
+            return max;
+        }).reversed().thenComparing(CATEGORY_COMPARATOR.apply(playerRef));
+
     private static final Map<String, Function<PlayerRef, Comparator<Item>>> COMPARATORS =
         new LinkedHashMap<>() {{
             put("Category", CATEGORY_COMPARATOR);
             put("Name (A-Z)", NAME_COMPARATOR);
             put("Name (Z-A)", playerRef -> NAME_COMPARATOR.apply(playerRef).reversed());
+            put("Weapon Damage", WEAPON_DAMAGE);
             put("Quality", QUALITY_COMPARATOR);
         }};
     private static final String RESET_FILTERS_ACTION = "ResetFilters";
@@ -291,7 +306,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void buildList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
-        List<Item> items = new LinkedList<>(Main.ITEMS);
+        List<Item> items = new LinkedList<>(Item.getAssetMap().getAssetMap().values());
         Set<String> modItems = Item.getAssetMap().getKeysForPack(settings.modFilter);
 
         items.removeIf(item -> {
@@ -325,7 +340,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             }
 
             if (settings.craftableFilter != BetterItemViewerComponent.Filter.ALL) {
-                boolean hasRecipe = Main.RECIPES_BY_INPUT.get(item.getId()) != null;
+                boolean hasRecipe = !ItemManager.get().getOrCreateDetails(item.getId()).craftingRecipes.isEmpty();
                 if (hasRecipe && settings.craftableFilter == BetterItemViewerComponent.Filter.NO) {
                     return true;
                 } else if (!hasRecipe && settings.craftableFilter == BetterItemViewerComponent.Filter.YES) {
@@ -614,64 +629,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     private void addWeaponInfo(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         List<Message> lines = new ArrayList<>();
 
-        Path path = Item.getAssetMap().getPath(item.getId());
-        Path root = AssetModule.get().getBaseAssetPack().getRoot();
-        Path resolve = root.resolve(path);
+        ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
 
-        Map<String, Map.Entry<Integer, Integer>> damageInteractions = new LinkedHashMap<>();
-
-        if (Files.exists(resolve)) {
-            try {
-                JsonParser parser = new JsonParser();
-                String jsonContent = Files.readString(resolve);
-                JsonObject json = parser.parse(jsonContent).getAsJsonObject();
-                if (json.has("InteractionVars")) {
-                    for (Map.Entry<String, JsonElement> interactionVars : json.get("InteractionVars").getAsJsonObject().entrySet()) {
-                        String key = interactionVars.getKey();
-                        JsonElement value = interactionVars.getValue();
-                        if (!value.isJsonObject()) continue;
-                        JsonObject interactionVar = value.getAsJsonObject();
-                        if (interactionVar.has("Interactions")) {
-                            for (JsonElement interaction_ : interactionVar.getAsJsonArray("Interactions")) {
-                                JsonObject interaction = interaction_.getAsJsonObject();
-                                if (interaction.has("DamageCalculator")) {
-                                    JsonObject damageCalculator = interaction.get("DamageCalculator").getAsJsonObject();
-                                    if (damageCalculator.has("BaseDamage")) {
-                                        JsonObject baseDamage = damageCalculator.get("BaseDamage").getAsJsonObject();
-
-                                        float minAmount = 0;
-                                        float maxAmount = 0;
-                                        for (Map.Entry<String, JsonElement> stringJsonElementEntry : baseDamage.entrySet()) {
-                                            JsonElement damageValue = stringJsonElementEntry.getValue();
-                                            minAmount = damageValue.getAsFloat();
-                                            maxAmount = damageValue.getAsFloat();
-                                        }
-                                        if (damageCalculator.has("RandomPercentageModifier")) {
-                                            float randomPercentageModifier = damageCalculator.get("RandomPercentageModifier").getAsFloat();
-                                            minAmount *= (1f - randomPercentageModifier);
-                                            maxAmount *= (1f + randomPercentageModifier);
-                                        }
-
-                                        damageInteractions.put(key, Map.entry((int) minAmount, (int) maxAmount));
-
-                                    }
-                                }
-                            }
-
-                        }
-                    }
-                }
-
-            } catch (IOException _) {
-            }
-        }
-
-        combineDamageInteractions(damageInteractions).forEach((s, entry) -> {
-            String damageValue = entry.getKey() + "";
-            if (!entry.getKey().equals(entry.getValue())) {
-                damageValue += "-" + entry.getValue();
-            }
-            lines.add(Message.raw(formatDamageInteractionVariable(s) + ": ").insert(Message.raw(damageValue).color("#ee7777")));
+        combineDamageInteractions(itemDetails.damageInteractions).forEach((s, range) -> {
+            lines.add(Message.raw(formatDamageInteractionVariable(s) + ": ").insert(Message.raw(range.format()).color("#ee7777")));
         });
 
         ItemWeapon weapon = item.getWeapon();
@@ -692,19 +653,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void addNpcLoot(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
-        Map<String, Map.Entry<Integer, Integer>> itemDrops = Main.MOB_LOOT.get(item.getId());
-        if (itemDrops == null) return;
+        ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
         List<Message> lines = new ArrayList<>();
 
-        itemDrops.forEach((role, drop) -> {
-
-            int min = drop.getKey();
-            int max = drop.getValue();
-            String value = String.format("%d-%d", min, max);
-            if (Objects.equals(min, max)) {
-                value = String.valueOf(min);
-            }
-            lines.add(Message.translation(role).insert(": ").insert(Message.raw(value).color("#77ee77")));
+        itemDetails.mobLoot.forEach((role, drop) -> {
+            lines.add(Message.translation(role).insert(": ").insert(Message.raw(drop.format()).color("#77ee77")));
         });
 
         if (lines.isEmpty()) return;
@@ -712,20 +665,19 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void addRecipes(BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
-        addRecipes(settings, item, commandBuilder, eventBuilder, "Recipes", "#Recipes", Main.RECIPES_BY_INPUT, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
-        addRecipes(settings, item, commandBuilder, eventBuilder, "Usages", "#UsedIn", Main.RECIPES_BY_OUTPUT, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
+        ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
+        addRecipes(settings, item, commandBuilder, eventBuilder, "Recipes", "#Recipes", itemDetails.craftingRecipes, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
+        addRecipes(settings, item, commandBuilder, eventBuilder, "Usages", "#UsedIn", itemDetails.usageRecipes, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
     }
 
     private void addRecipes(
         BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder,
-        String title, String tag, Map<String, List<CraftingRecipe>> recipes, int currentPage,
+        String title, String tag, Map<String, CraftingRecipe> craftingRecipesById, int currentPage,
         Consumer<Integer> pageChange, String eventKey
     ) {
-        List<CraftingRecipe> craftingRecipes = recipes.get(item.getId());
+        if (craftingRecipesById.isEmpty()) return;
 
-        if (craftingRecipes == null) return;
-
-        craftingRecipes = craftingRecipes.stream().filter(craftingRecipe -> {
+        List<CraftingRecipe> craftingRecipes = craftingRecipesById.values().stream().filter(craftingRecipe -> {
             BenchRequirement[] benchRequirements = craftingRecipe.getBenchRequirement();
             if (benchRequirements == null) return true;
             for (BenchRequirement benchRequirement : benchRequirements) {
@@ -907,13 +859,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         return Message.raw(type + ": ").insert(Message.raw(value).color("#eeeeee"));
     }
 
-    private static Map<String, Map.Entry<Integer, Integer>> combineDamageInteractions(Map<String, Map.Entry<Integer, Integer>> damageInteractions) {
-        Map<String, Map.Entry<Integer, Integer>> result = new LinkedHashMap<>();
+    private static Map<String, Range> combineDamageInteractions(Map<String, Range> damageInteractions) {
+        Map<String, Range> result = new LinkedHashMap<>();
 
         Set<String> handledInteractions = new HashSet<>();
 
         // A map from truncated id + damage to their original id
-        Map<Map.Entry<String, Map.Entry<Integer, Integer>>, List<String>> directionGroups = new LinkedHashMap<>();
+        Map<Map.Entry<String, Range>, List<String>> directionGroups = new LinkedHashMap<>();
 
         damageInteractions.forEach((interactionId, damageRange) -> {
             if (handledInteractions.contains(interactionId)) return;
@@ -930,7 +882,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         });
 
         // Group strength into one
-        Map<String, Map.Entry<Integer, Integer>> strengthGroups = new LinkedHashMap<>();
+        Map<String, Range> strengthGroups = new LinkedHashMap<>();
         damageInteractions.forEach((interactionId, damageRange) -> {
             if (handledInteractions.contains(interactionId)) return;
             if (!interactionId.contains("_Damage_Strength_")) return;
@@ -940,7 +892,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             handledInteractions.add(interactionId);
             strengthGroups.compute(removedDamageStrength, (_, oldDamageRange) -> {
                 if (oldDamageRange != null) {
-                    return Map.entry(Math.min(oldDamageRange.getKey(), damageRange.getKey()), Math.max(oldDamageRange.getValue(), damageRange.getValue()));
+                    return oldDamageRange.merge(damageRange);
                 } else {
                     return damageRange;
                 }
