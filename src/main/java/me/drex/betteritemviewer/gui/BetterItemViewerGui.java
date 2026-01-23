@@ -1,5 +1,8 @@
 package me.drex.betteritemviewer.gui;
 
+import com.google.gson.JsonElement;
+import com.google.gson.JsonObject;
+import com.google.gson.JsonParser;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -28,9 +31,6 @@ import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.DamageEntityInteraction;
-import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageCalculator;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageClass;
 import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.ui.Anchor;
@@ -43,14 +43,15 @@ import com.hypixel.hytale.server.core.ui.builder.UIEventBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
-import it.unimi.dsi.fastutil.objects.Object2FloatMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.Main;
 
 import javax.annotation.Nonnull;
 import java.awt.*;
-import java.lang.reflect.Field;
+import java.io.IOException;
+import java.nio.file.Files;
+import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
@@ -60,17 +61,6 @@ import java.util.function.Function;
 import static me.drex.betteritemviewer.gui.BetterItemViewerGui.GuiData.*;
 
 public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.GuiData> {
-
-    private static final String[] PRIMARY_INTERACTION_VARS = new String[]{
-        "Swing_Left_Damage",
-        "Longsword_Swing_Left_Damage",
-        "Swing_Down_Left_Damage",
-        "Axe_Swing_Down_Left_Damage",
-        "Club_Swing_Left_Damage",
-        "Spear_Stab_Damage"
-    };
-
-
     public static final Function<PlayerRef, Comparator<Item>> NAME_COMPARATOR = playerRef ->
         Comparator.comparing(item ->
             Objects.requireNonNullElse(
@@ -537,10 +527,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         double maxDurability = item.getMaxDurability();
         if (maxDurability > 0) {
-            lines.add(Message.raw("Durability: " + String.format("%.0f", maxDurability)));
+            lines.add(formatSimpleStat("Durability", String.format("%.0f", maxDurability)));
         }
 
-        lines.add(Message.raw("Max Stack: " + item.getMaxStack()));
+        lines.add(formatSimpleStat("Max Stack", item.getMaxStack() + ""));
 
         int qualityIndex = item.getQualityIndex();
         ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
@@ -554,7 +544,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             AssetPack assetPack = AssetModule.get().getAssetPack(assetPackId);
             if (assetPack != null) {
                 PluginManifest manifest = assetPack.getManifest();
-                lines.add((Message.raw("Mod: ").insert(Message.raw(manifest.getName()))));
+                lines.add(formatSimpleStat("Mod", manifest.getName()));
             }
         }
         addStatsSection(commandBuilder, index, "General", lines);
@@ -568,7 +558,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         List<Message> lines = new ArrayList<>();
         for (ItemToolSpec spec : specs) {
-            lines.add(Message.raw(spec.getGatherType() + ": " + String.format("%.2f", spec.getPower())));
+            lines.add(formatSimpleStat(spec.getGatherType(), String.format("%.2f", spec.getPower())));
         }
         addStatsSection(commandBuilder, index, "Breaking Speed", lines);
     }
@@ -622,50 +612,81 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     }
 
     private void addWeaponInfo(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
-        // All of this is cursed, I am sorry for my crimes. But I don't think there is a better way at the moment.
         List<Message> lines = new ArrayList<>();
 
-        String initialDamageInteraction = null;
-        Map<String, String> interactionVars = item.getInteractionVars();
-        for (String primaryInteractionVar : PRIMARY_INTERACTION_VARS) {
-            if (interactionVars.containsKey(primaryInteractionVar)) {
-                initialDamageInteraction = interactionVars.get(primaryInteractionVar);
-                break;
-            }
-        }
-        if (initialDamageInteraction == null) return;
+        Path path = Item.getAssetMap().getPath(item.getId());
+        Path root = AssetModule.get().getBaseAssetPack().getRoot();
+        Path resolve = root.resolve(path);
 
-        String interactionId = String.format("*%s_Interactions_0", initialDamageInteraction);
+        Map<String, Map.Entry<Integer, Integer>> damageInteractions = new LinkedHashMap<>();
 
-        Interaction interaction = Interaction.getAssetMap().getAsset(interactionId);
-        if (interaction instanceof DamageEntityInteraction damageEntityInteraction) {
+        if (Files.exists(resolve)) {
             try {
-                Field damageCalculatorField = DamageEntityInteraction.class.getDeclaredField("damageCalculator");
-                damageCalculatorField.setAccessible(true);
-                DamageCalculator damageCalculator = (DamageCalculator) damageCalculatorField.get(damageEntityInteraction);
-                Field baseDamageRawField = DamageCalculator.class.getDeclaredField("baseDamageRaw");
-                baseDamageRawField.setAccessible(true);
-                Object2FloatMap<String> baseDamageRaw = (Object2FloatMap<String>) baseDamageRawField.get(damageCalculator);
+                JsonParser parser = new JsonParser();
+                String jsonContent = Files.readString(resolve);
+                JsonObject json = parser.parse(jsonContent).getAsJsonObject();
+                if (json.has("InteractionVars")) {
+                    for (Map.Entry<String, JsonElement> interactionVars : json.get("InteractionVars").getAsJsonObject().entrySet()) {
+                        String key = interactionVars.getKey();
+                        JsonElement value = interactionVars.getValue();
+                        if (!value.isJsonObject()) continue;
+                        JsonObject interactionVar = value.getAsJsonObject();
+                        if (interactionVar.has("Interactions")) {
+                            for (JsonElement interaction_ : interactionVar.getAsJsonArray("Interactions")) {
+                                JsonObject interaction = interaction_.getAsJsonObject();
+                                if (interaction.has("DamageCalculator")) {
+                                    JsonObject damageCalculator = interaction.get("DamageCalculator").getAsJsonObject();
+                                    if (damageCalculator.has("BaseDamage")) {
+                                        JsonObject baseDamage = damageCalculator.get("BaseDamage").getAsJsonObject();
 
-                Field randomPercentageModifierField = DamageCalculator.class.getDeclaredField("randomPercentageModifier");
-                randomPercentageModifierField.setAccessible(true);
-                float randomPercentageModifier = randomPercentageModifierField.getFloat(damageCalculator);
+                                        float minAmount = 0;
+                                        float maxAmount = 0;
+                                        for (Map.Entry<String, JsonElement> stringJsonElementEntry : baseDamage.entrySet()) {
+                                            JsonElement damageValue = stringJsonElementEntry.getValue();
+                                            minAmount = damageValue.getAsFloat();
+                                            maxAmount = damageValue.getAsFloat();
+                                        }
+                                        if (damageCalculator.has("RandomPercentageModifier")) {
+                                            float randomPercentageModifier = damageCalculator.get("RandomPercentageModifier").getAsFloat();
+                                            minAmount *= (1f - randomPercentageModifier);
+                                            maxAmount *= (1f + randomPercentageModifier);
+                                        }
 
+                                        damageInteractions.put(key, Map.entry((int) minAmount, (int) maxAmount));
 
-                baseDamageRaw.forEach((damageCause, damage) -> {
-                    String value;
-                    if (randomPercentageModifier > 0) {
-                        value = String.format("%.0f ±%.0f%%", damage, (randomPercentageModifier * 100));
-                    } else {
-                        value = String.format("%.0f", damage);
+                                    }
+                                }
+                            }
+
+                        }
                     }
-                    lines.add(Message.raw(damageCause + ": " + value));
-                });
+                }
 
-            } catch (NoSuchFieldException | IllegalAccessException e) {
-                throw new RuntimeException(e);
+            } catch (IOException _) {
             }
         }
+
+        combineDamageInteractions(damageInteractions).forEach((s, entry) -> {
+            String damageValue = entry.getKey() + "";
+            if (!entry.getKey().equals(entry.getValue())) {
+                damageValue += "-" + entry.getValue();
+            }
+            lines.add(Message.raw(formatDamageInteractionVariable(s) + ": ").insert(Message.raw(damageValue).color("#ee7777")));
+        });
+
+        ItemWeapon weapon = item.getWeapon();
+        if (weapon != null) {
+            Int2ObjectMap<StaticModifier[]> statModifiers = weapon.getStatModifiers();
+            if (statModifiers != null) {
+                statModifiers.forEach((entityStatTypeIndex, staticModifiers) -> {
+                    EntityStatType entityStatType = EntityStatType.getAssetMap().getAsset(entityStatTypeIndex);
+                    for (StaticModifier staticModifier : staticModifiers) {
+                        lines.add(Message.raw(entityStatType.getId() + ": ").insert(Message.raw("+" + formatStaticModifier(staticModifier)).color("#eeeeaa")));
+                    }
+                });
+            }
+        }
+
         if (lines.isEmpty()) return;
         addStatsSection(commandBuilder, index, "Weapon", lines);
     }
@@ -679,11 +700,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
             int min = drop.getKey();
             int max = drop.getValue();
-            String value = String.format("%d - %d", min, max);
+            String value = String.format("%d-%d", min, max);
             if (Objects.equals(min, max)) {
                 value = String.valueOf(min);
             }
-            lines.add(Message.translation(role).insert(": " + value));
+            lines.add(Message.translation(role).insert(": ").insert(Message.raw(value).color("#77ee77")));
         });
 
         if (lines.isEmpty()) return;
@@ -880,6 +901,65 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             case MULTIPLICATIVE -> value = String.format("%.0f", staticModifier.getAmount() * 100) + "%";
         }
         return value;
+    }
+
+    private static Message formatSimpleStat(String type, String value) {
+        return Message.raw(type + ": ").insert(Message.raw(value).color("#eeeeee"));
+    }
+
+    private static Map<String, Map.Entry<Integer, Integer>> combineDamageInteractions(Map<String, Map.Entry<Integer, Integer>> damageInteractions) {
+        Map<String, Map.Entry<Integer, Integer>> result = new LinkedHashMap<>();
+
+        Set<String> handledInteractions = new HashSet<>();
+
+        // A map from truncated id + damage to their original id
+        Map<Map.Entry<String, Map.Entry<Integer, Integer>>, List<String>> directionGroups = new LinkedHashMap<>();
+
+        damageInteractions.forEach((interactionId, damageRange) -> {
+            if (handledInteractions.contains(interactionId)) return;
+            String removedDirections = interactionId.replace("_Up", "").replace("_Down", "").replace("_Left", "").replace("_Right", "");
+
+            directionGroups.computeIfAbsent(Map.entry(removedDirections, damageRange), (key) -> new ArrayList<>()).add(interactionId);
+        });
+
+        directionGroups.forEach((interactionGroup, interactionIds) -> {
+            if (interactionIds.size() > 1) {
+                handledInteractions.addAll(interactionIds);
+                result.put(interactionGroup.getKey(), interactionGroup.getValue());
+            }
+        });
+
+        // Group strength into one
+        Map<String, Map.Entry<Integer, Integer>> strengthGroups = new LinkedHashMap<>();
+        damageInteractions.forEach((interactionId, damageRange) -> {
+            if (handledInteractions.contains(interactionId)) return;
+            if (!interactionId.contains("_Damage_Strength_")) return;
+
+            String removedDamageStrength = interactionId.replaceAll("_Damage_Strength_\\d+", "");
+
+            handledInteractions.add(interactionId);
+            strengthGroups.compute(removedDamageStrength, (_, oldDamageRange) -> {
+                if (oldDamageRange != null) {
+                    return Map.entry(Math.min(oldDamageRange.getKey(), damageRange.getKey()), Math.max(oldDamageRange.getValue(), damageRange.getValue()));
+                } else {
+                    return damageRange;
+                }
+            });
+        });
+        result.putAll(strengthGroups);
+
+
+        damageInteractions.forEach((interactionId, damageInteraction) -> {
+            if (handledInteractions.contains(interactionId)) return;
+            handledInteractions.add(interactionId);
+            result.put(interactionId, damageInteraction);
+        });
+
+        return result;
+    }
+
+    private static String formatDamageInteractionVariable(String damageInteractionVar) {
+        return damageInteractionVar.replace("_Damage", "").replace("_", " ");
     }
 
     public static class GuiData {

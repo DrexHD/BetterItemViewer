@@ -36,13 +36,10 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
             if (playerRefComponent == null) return;
 
             BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
-            CompletableFuture.runAsync(() -> {
-                PageManager pageManager = player.getPageManager();
-                if (component.altKeybind && pageManager.getCustomPage() == null) {
-                    pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component, inventory));
-                }
-            });
-
+            PageManager pageManager = player.getPageManager();
+            if (component.altKeybind && pageManager.getCustomPage() == null) {
+                pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component, inventory));
+            }
         }
     }
 

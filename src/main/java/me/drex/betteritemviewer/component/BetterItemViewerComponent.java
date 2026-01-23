@@ -51,7 +51,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public String modFilter = "";
     public String categoryFilter = "";
     public Filter craftableFilter = Filter.ALL;
-    public String sortMode = "";
+    public String sortMode = "Category";
     public String selectedItem;
     public int selectedPage = 0;
     public int selectedRecipeInPage = 0;
