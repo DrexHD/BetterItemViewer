@@ -774,7 +774,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.AssetPath", resourceType.getIcon());
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.Visible", true);
             String value = countInventory ? count + "/" + materialQuantity.getQuantity() + " " : materialQuantity.getQuantity() + " ";
-            commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.raw(resourceType.getName()));
+            commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.translation("server.resourceType." + resourceTypeId + ".name"));
             commandBuilder.set(tag + "[" + i + "] #ItemQuantity.TextSpans", Message.raw(value));
             eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #ItemButton", EventData.of(KEY_SET_SEARCH, "#" + resourceTypeId).append(KEY_ACTION, RESET_FILTERS_ACTION));
             if (countInventory) {
