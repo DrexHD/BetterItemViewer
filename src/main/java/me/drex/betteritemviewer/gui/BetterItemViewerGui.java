@@ -141,32 +141,24 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             if (data.action.equals(RESET_FILTERS_ACTION)) {
                 settings.clearFilters();
                 setInputValues(commandBuilder);
-                this.buildList(settings, commandBuilder, eventBuilder);
-                this.sendUpdate(commandBuilder, eventBuilder, false);
             }
         }
 
         if (data.selectItem != null) {
             settings.selectedItem = data.selectItem;
-            this.updateStats(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.setSearch != null) {
             settings.searchQuery = data.setSearch.trim().toLowerCase();
             settings.selectedPage = 0;
             commandBuilder.set("#SearchInput.Value", settings.searchQuery);
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.giveItem != null) {
-            this.sendUpdate(commandBuilder, eventBuilder, false);
             giveItem(ref, store, data.giveItem, false);
         }
 
         if (data.giveItemStack != null) {
-            this.sendUpdate(commandBuilder, eventBuilder, false);
             giveItem(ref, store, data.giveItemStack, true);
         }
 
@@ -176,8 +168,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             } catch (NumberFormatException e) {
                 settings.selectedRecipeInPage = 0;
             }
-            this.updateStats(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.recipeOutPage != null) {
@@ -186,8 +176,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             } catch (NumberFormatException e) {
                 settings.selectedRecipeOutPage = 0;
             }
-            this.updateStats(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.listPage != null) {
@@ -196,29 +184,21 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             } catch (NumberFormatException e) {
                 settings.selectedPage = 0;
             }
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.searchQuery != null) {
             settings.searchQuery = data.searchQuery.trim().toLowerCase();
             settings.selectedPage = 0;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.modFilter != null) {
             settings.modFilter = data.modFilter;
             settings.selectedPage = 0;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.categoryFilter != null) {
             settings.categoryFilter = data.categoryFilter;
             settings.selectedPage = 0;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.craftableFilter != null) {
@@ -227,8 +207,6 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             } catch (Exception _) {
             }
             settings.selectedPage = 0;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.gridLayout != null) {
@@ -241,15 +219,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
             }
             settings.selectedPage = 0;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.sortMode != null) {
             settings.sortMode = data.sortMode;
             settings.selectedPage = 0;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.altKeybind != null) {
@@ -259,16 +233,15 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
         if (data.showSalvagerRecipes != null) {
             settings.showSalvagerRecipes = data.showSalvagerRecipes;
-            this.updateStats(settings, commandBuilder, eventBuilder);
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
 
         if (data.showHiddenItems != null) {
             settings.showHiddenItems = data.showHiddenItems;
-            this.buildList(settings, commandBuilder, eventBuilder);
-            this.sendUpdate(commandBuilder, eventBuilder, false);
         }
+
+        this.updateStats(settings, commandBuilder, eventBuilder);
+        this.buildList(settings, commandBuilder, eventBuilder);
+        this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
     private void setInputValues(UICommandBuilder commandBuilder) {
