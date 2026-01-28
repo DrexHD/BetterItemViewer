@@ -769,9 +769,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 }
                 return false;
             });
+            String icon = resourceType.getIcon();
+            if (icon == null) {
+                icon = "Icons/ResourceTypes/Unknown.png";
+            }
 
             commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RecipeEntry.ui");
-            commandBuilder.set(tag + "[" + i + "] #ResourceIcon.AssetPath", resourceType.getIcon());
+            commandBuilder.set(tag + "[" + i + "] #ResourceIcon.AssetPath", icon);
             commandBuilder.set(tag + "[" + i + "] #ResourceIcon.Visible", true);
             String value = countInventory ? count + "/" + materialQuantity.getQuantity() + " " : materialQuantity.getQuantity() + " ";
             commandBuilder.set(tag + "[" + i + "] #ItemName.TextSpans", Message.translation("server.resourceType." + resourceTypeId + ".name"));
