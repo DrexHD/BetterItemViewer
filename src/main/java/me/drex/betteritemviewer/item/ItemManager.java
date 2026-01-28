@@ -7,11 +7,9 @@ import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3d;
+import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.server.core.asset.AssetModule;
-import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
-import com.hypixel.hytale.server.core.asset.type.item.config.Item;
-import com.hypixel.hytale.server.core.asset.type.item.config.ItemDrop;
-import com.hypixel.hytale.server.core.asset.type.item.config.ItemDropList;
+import com.hypixel.hytale.server.core.asset.type.item.config.*;
 import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
@@ -62,8 +60,23 @@ public class ItemManager {
             itemDetails.craftingRecipes.put(id, craftingRecipe);
         }
         for (MaterialQuantity input : craftingRecipe.getInput()) {
-            ItemDetails itemDetails = getOrCreateDetails(input.getItemId());
-            itemDetails.usageRecipes.put(id, craftingRecipe);
+            String itemId = input.getItemId();
+            String resourceTypeId = input.getResourceTypeId();
+            if (itemId != null) {
+                ItemDetails itemDetails = getOrCreateDetails(itemId);
+                itemDetails.usageRecipes.put(id, craftingRecipe);
+            } else if (resourceTypeId != null) {
+                for (Item item : Item.getAssetMap().getAssetMap().values()) {
+                    ItemResourceType[] resourceTypes = item.getResourceTypes();
+                    if (resourceTypes == null) continue;
+                    for (ItemResourceType type : resourceTypes) {
+                        if (resourceTypeId.equals(type.id)) {
+                            ItemDetails itemDetails = getOrCreateDetails(item.getId());
+                            itemDetails.usageRecipes.put(id, craftingRecipe);
+                        }
+                    }
+                }
+            }
         }
     }
 

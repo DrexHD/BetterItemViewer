@@ -1,7 +1,7 @@
 {
   "Group": "Drex",
   "Name": "BetterItemViewer",
-  "Version": "1.10.1",
+  "Version": "1.11.0",
   "Description": "Adds an item viewer with a bunch of extra information about tools, weapons and other items that are not visible in the base game",
   "Authors": [
     {
