@@ -4,6 +4,7 @@ import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
+import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
@@ -42,13 +43,15 @@ public class BetterItemViewerCommand extends AbstractCommand {
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
                 return CompletableFuture.runAsync(() -> {
+                    PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
+                    if (playerRefComponent == null) return;
+                    BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                     try {
-                        PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-                        if (playerRefComponent == null) return;
-                        BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                         player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings, inventory));
                     } catch (Exception e) {
-                        Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Error while opening BetterItemViewerGui");
+                        player.sendMessage(Message.raw("An error occurred while opening the GUI."));
+                        Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                        settings.clearFilters();
                     }
                 }, world);
             } else {

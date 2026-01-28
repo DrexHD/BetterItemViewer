@@ -20,6 +20,7 @@ import me.drex.betteritemviewer.gui.BetterItemViewerGui;
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
 import java.util.concurrent.CompletableFuture;
+import java.util.logging.Level;
 
 public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
     @Override
@@ -36,9 +37,14 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
             if (playerRefComponent == null) return;
 
             BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
-            PageManager pageManager = player.getPageManager();
-            if (component.altKeybind && pageManager.getCustomPage() == null) {
-                pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component, inventory));
+            try {
+                PageManager pageManager = player.getPageManager();
+                if (component.altKeybind && pageManager.getCustomPage() == null) {
+                    pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component, inventory));
+                }
+            } catch (Exception e) {
+                Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                component.clearFilters();
             }
         }
     }

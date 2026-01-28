@@ -12,10 +12,12 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHa
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.gui.BetterItemViewerGui;
 
 import javax.annotation.Nonnull;
+import java.util.logging.Level;
 
 public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
     public static final BuilderCodec<OpenBetterItemViewerInteraction> CODEC = BuilderCodec.builder(
@@ -32,8 +34,13 @@ public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
         PlayerRef playerRef = buffer.getComponent(ref, PlayerRef.getComponentType());
         if (player != null && playerRef != null) {
             BetterItemViewerComponent settings = buffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+            try {
+                player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss, settings, player.getInventory()));
+            } catch (Exception e) {
+                Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                settings.clearFilters();
+            }
 
-            player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss, settings, player.getInventory()));
         }
     }
 }
