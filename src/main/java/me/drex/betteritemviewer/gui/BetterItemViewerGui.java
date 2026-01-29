@@ -3,6 +3,7 @@ package me.drex.betteritemviewer.gui;
 import com.google.gson.JsonElement;
 import com.google.gson.JsonObject;
 import com.google.gson.JsonParser;
+import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -123,6 +124,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvager #CheckBox", EventData.of(KEY_SHOW_SALVAGER_RECIPES, "#ShowSalvager #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowCreatorInfo #CheckBox", EventData.of(KEY_SHOW_CREATOR_INFO, "#ShowCreatorInfo #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
         this.buildList(component, commandBuilder, eventBuilder);
         this.updateStats(component, commandBuilder, eventBuilder);
@@ -239,6 +241,10 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             settings.showHiddenItems = data.showHiddenItems;
         }
 
+        if (data.showCreatorInfo != null) {
+            settings.showCreatorInfo = data.showCreatorInfo;
+        }
+
         this.updateStats(settings, commandBuilder, eventBuilder);
         this.buildList(settings, commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
@@ -252,6 +258,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
         commandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
         commandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
+        commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", component.showCreatorInfo);
         commandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
         commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
     }
@@ -458,6 +465,9 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#ItemTitle #ItemId.TextSpans", Message.raw("ID: " + selectedItem.getId()));
         AtomicInteger index = new AtomicInteger(0);
 
+        if (settings.showCreatorInfo) {
+            addCreatorInfo(selectedItem, commandBuilder, index);
+        }
         addDescription(selectedItem, commandBuilder, index);
         addGeneral(selectedItem, commandBuilder, index);
         addArmorInfo(selectedItem, commandBuilder, index);
@@ -502,6 +512,40 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 ++rowIndex;
             }
         }
+    }
+
+    private void addCreatorInfo(Item selectedItem, UICommandBuilder commandBuilder, AtomicInteger index) {
+        List<Message> lines = new ArrayList<>();
+        lines.add(formatSimpleStat("ID", selectedItem.getId()));
+
+        String[] categories = selectedItem.getCategories();
+        if (categories != null) {
+            lines.add(formatSimpleStat("Categories", String.join(", ", categories)));
+        }
+        String icon = selectedItem.getIcon();
+        if (icon != null) {
+            lines.add(formatSimpleStat("Icon", icon));
+        }
+        Path path = Item.getAssetMap().getPath(selectedItem.getId());
+        if (path != null) {
+            lines.add(formatSimpleStat("Asset", path.toString()));
+        }
+
+        String blockId = selectedItem.getBlockId();
+        if (blockId != null) {
+            lines.add(formatSimpleStat("Block ID", blockId));
+        }
+        String model = selectedItem.getModel();
+        if (model != null) {
+            lines.add(formatSimpleStat("Model", model));
+        }
+
+        String texture = selectedItem.getTexture();
+        if (texture != null) {
+            lines.add(formatSimpleStat("Texture", texture));
+        }
+
+        addStatsSection(commandBuilder, index, "Creator Info", lines);
     }
 
     private void addDescription(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
@@ -567,7 +611,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 EntityStatType entityStatType = EntityStatType.getAssetMap().getAsset(entry.getIntKey());
                 if (entityStatType == null) continue;
                 for (StaticModifier staticModifier : entry.getValue()) {
-                    lines.add(Message.raw(entityStatType.getId() + ": +" + formatStaticModifier(staticModifier)));
+                    lines.add(formatSimpleStat(entityStatType.getId(), formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -575,7 +619,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (damageResistanceValues != null) {
             for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageResistanceValues.entrySet()) {
                 for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
-                    lines.add(Message.raw(damageCauseEntry.getKey().getId() + " Resistance: +" + formatStaticModifier(staticModifier)));
+                    lines.add(formatSimpleStat(damageCauseEntry.getKey().getId() + " Resistance", formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -583,7 +627,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (damageClassEnhancement != null) {
             for (Map.Entry<DamageClass, StaticModifier[]> damageClassEntry : damageClassEnhancement.entrySet()) {
                 for (StaticModifier staticModifier : damageClassEntry.getValue()) {
-                    lines.add(Message.raw(firstLetterUppercase(damageClassEntry.getKey().name()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
+                    lines.add(formatSimpleStat(firstLetterUppercase(damageClassEntry.getKey().name()) + " Attack Damage", formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -591,7 +635,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (damageEnhancementValues != null) {
             for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageEnhancementValues.entrySet()) {
                 for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
-                    lines.add(Message.raw(firstLetterUppercase(damageCauseEntry.getKey().getId()) + " Attack Damage: +" + formatStaticModifier(staticModifier)));
+                    lines.add(formatSimpleStat(firstLetterUppercase(damageCauseEntry.getKey().getId()) + " Attack Damage", formatStaticModifier(staticModifier)));
                 }
             }
         }
@@ -825,9 +869,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     private static String formatStaticModifier(StaticModifier staticModifier) {
         StaticModifier.CalculationType calculationType = staticModifier.getCalculationType();
         String value = "";
+
         switch (calculationType) {
             case ADDITIVE -> value = String.format("%.0f", staticModifier.getAmount());
             case MULTIPLICATIVE -> value = String.format("%.0f", staticModifier.getAmount() * 100) + "%";
+        }
+        if (staticModifier.getAmount() >= 0) {
+            return "+" + value;
         }
         return value;
     }
@@ -901,6 +949,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_ALT_KEYBIND = "@AltKeybind";
         static final String KEY_SHOW_SALVAGER_RECIPES = "@ShowSalvagerRecipes";
         static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
+        static final String KEY_SHOW_CREATOR_INFO = "@ShowCreatorInfo";
         static final String KEY_ITEM = "SelectItem";
         static final String KEY_SET_SEARCH = "SetSearch";
         static final String KEY_GIVE_ITEM = "GiveItem";
@@ -919,6 +968,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
             .addField(new KeyedCodec<>(KEY_SHOW_SALVAGER_RECIPES, Codec.BOOLEAN), (guiData, s) -> guiData.showSalvagerRecipes = s, guiData -> guiData.showSalvagerRecipes)
             .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
+            .addField(new KeyedCodec<>(KEY_SHOW_CREATOR_INFO, Codec.BOOLEAN), (guiData, s) -> guiData.showCreatorInfo = s, guiData -> guiData.showCreatorInfo)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
             .addField(new KeyedCodec<>(KEY_SET_SEARCH, Codec.STRING), (guiData, s) -> guiData.setSearch = s, guiData -> guiData.setSearch)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
@@ -942,6 +992,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private Boolean altKeybind;
         private Boolean showSalvagerRecipes;
         private Boolean showHiddenItems;
+        private Boolean showCreatorInfo;
         private String listPage;
         private String recipeInPage;
         private String recipeOutPage;

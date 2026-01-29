@@ -114,6 +114,11 @@ $C.@PageOverlay {
           Padding: (Top: 2);
         }
 
+        $C.@CheckBoxWithLabel #ShowCreatorInfo {
+          @Text = "Show Creator Info";
+          Padding: (Top: 2);
+        }
+
         $C.@CheckBoxWithLabel #AltKeybind {
           @Text = "Enable 'Alt' Keybind";
           Padding: (Top: 2, Bottom: 4);

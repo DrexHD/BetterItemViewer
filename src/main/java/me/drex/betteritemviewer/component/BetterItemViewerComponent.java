@@ -43,6 +43,8 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         .add()
         .append(new KeyedCodec<>("ShowHiddenItems", Codec.BOOLEAN), (o, v) -> o.showHiddenItems = v, o -> o.showHiddenItems)
         .add()
+        .append(new KeyedCodec<>("ShowCreatorInfo", Codec.BOOLEAN), (o, v) -> o.showCreatorInfo = v, o -> o.showCreatorInfo)
+        .add()
         .append(new KeyedCodec<>("AltKeybind", Codec.BOOLEAN), (o, v) -> o.altKeybind = v, o -> o.altKeybind)
         .add()
         .build();
@@ -60,6 +62,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public int itemListColumns = 8;
     public boolean showSalvagerRecipes = false;
     public boolean showHiddenItems = false;
+    public boolean showCreatorInfo = false;
     public boolean altKeybind = Main.getInstance().config.get().defaultAltKeybind;
 
     public static ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
@@ -84,7 +87,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public BetterItemViewerComponent(
         String searchQuery, String modFilter, String categoryFilter, Filter craftableFilter, String sortMode,
         String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage, int itemListRows,
-        int itemListColumns, boolean showSalvagerRecipes, boolean showHiddenItems, boolean altKeybind
+        int itemListColumns, boolean showSalvagerRecipes, boolean showHiddenItems, boolean showCreatorInfo, boolean altKeybind
     ) {
         this.searchQuery = searchQuery;
         this.modFilter = modFilter;
@@ -99,6 +102,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         this.itemListColumns = itemListColumns;
         this.showSalvagerRecipes = showSalvagerRecipes;
         this.showHiddenItems = showHiddenItems;
+        this.showCreatorInfo = showCreatorInfo;
         this.altKeybind = altKeybind;
     }
 
@@ -107,7 +111,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public Component<EntityStore> clone() {
         return new BetterItemViewerComponent(
             searchQuery, modFilter, categoryFilter, craftableFilter, sortMode, selectedItem, selectedPage,
-            selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showSalvagerRecipes, showHiddenItems, altKeybind
+            selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showSalvagerRecipes, showHiddenItems, showCreatorInfo, altKeybind
         );
     }
 
