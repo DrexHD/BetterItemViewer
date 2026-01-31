@@ -11,6 +11,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.CooldownHandler;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.SimpleInstantInteraction;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
@@ -31,16 +32,20 @@ public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
         Store<EntityStore> store = ref.getStore();
         CommandBuffer<EntityStore> buffer = context.getCommandBuffer();
         Player player = buffer.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+        World world = player.getWorld();
+        if (world == null) return;
         PlayerRef playerRef = buffer.getComponent(ref, PlayerRef.getComponentType());
-        if (player != null && playerRef != null) {
+        if (playerRef != null) {
             BetterItemViewerComponent settings = buffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
-            try {
-                player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss, settings, player.getInventory()));
-            } catch (Exception e) {
-                Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
-                settings.clearFilters();
-            }
-
+            world.execute(() -> {
+                try {
+                    player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss));
+                } catch (Exception e) {
+                    Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                    settings.clearFilters();
+                }
+            });
         }
     }
 }

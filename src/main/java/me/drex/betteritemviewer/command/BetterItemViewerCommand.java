@@ -9,7 +9,6 @@ import com.hypixel.hytale.server.core.command.system.AbstractCommand;
 import com.hypixel.hytale.server.core.command.system.CommandContext;
 import com.hypixel.hytale.server.core.command.system.CommandSender;
 import com.hypixel.hytale.server.core.entity.entities.Player;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -38,7 +37,6 @@ public class BetterItemViewerCommand extends AbstractCommand {
         CommandSender sender = context.sender();
         if (sender instanceof Player player) {
             Ref<EntityStore> ref = player.getReference();
-            Inventory inventory = player.getInventory();
             if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
@@ -47,7 +45,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
                     if (playerRefComponent == null) return;
                     BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                     try {
-                        player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, settings, inventory));
+                        player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss));
                     } catch (Exception e) {
                         player.sendMessage(Message.raw("An error occurred while opening the GUI."));
                         Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");

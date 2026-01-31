@@ -1,9 +1,5 @@
 package me.drex.betteritemviewer.gui;
 
-import com.google.gson.JsonElement;
-import com.google.gson.JsonObject;
-import com.google.gson.JsonParser;
-import com.hypixel.hytale.assetstore.AssetExtraInfo;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
@@ -46,15 +42,12 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
-import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.item.ItemDetails;
 import me.drex.betteritemviewer.item.ItemManager;
 import me.drex.betteritemviewer.item.Range;
 
 import javax.annotation.Nonnull;
 import java.awt.*;
-import java.io.IOException;
-import java.nio.file.Files;
 import java.nio.file.Path;
 import java.util.*;
 import java.util.List;
@@ -108,32 +101,30 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }};
     private static final String RESET_FILTERS_ACTION = "ResetFilters";
 
-    private final BetterItemViewerComponent component;
-    private final Inventory inventory;
-
-    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime, BetterItemViewerComponent component, Inventory inventory) {
+    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, GuiData.CODEC);
-        this.component = component;
-        this.inventory = inventory;
     }
 
     @Override
     public void build(@Nonnull Ref<EntityStore> ref, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder, @Nonnull Store<EntityStore> store) {
         commandBuilder.append("Pages/Drex_BetterItemViewer_Gui.ui");
-        setInputValues(commandBuilder);
+        BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+
+        setInputValues(settings, commandBuilder);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SearchInput", EventData.of(KEY_SEARCH_QUERY, "#SearchInput.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvager #CheckBox", EventData.of(KEY_SHOW_SALVAGER_RECIPES, "#ShowSalvager #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowCreatorInfo #CheckBox", EventData.of(KEY_SHOW_CREATOR_INFO, "#ShowCreatorInfo #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
-        this.buildList(component, commandBuilder, eventBuilder);
-        this.updateStats(component, commandBuilder, eventBuilder);
+        this.build(ref, store, commandBuilder, eventBuilder);
     }
 
     // TODO fuel
     @Override
     public void handleDataEvent(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull GuiData data) {
         super.handleDataEvent(ref, store, data);
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
 
         BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
 
@@ -142,7 +133,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (data.action != null) {
             if (data.action.equals(RESET_FILTERS_ACTION)) {
                 settings.clearFilters();
-                setInputValues(commandBuilder);
+                setInputValues(settings, commandBuilder);
             }
         }
 
@@ -245,21 +236,20 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             settings.showCreatorInfo = data.showCreatorInfo;
         }
 
-        this.updateStats(settings, commandBuilder, eventBuilder);
-        this.buildList(settings, commandBuilder, eventBuilder);
+        this.build(ref, store, commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
 
-    private void setInputValues(UICommandBuilder commandBuilder) {
-        commandBuilder.set("#SearchInput.Value", component.searchQuery);
-        commandBuilder.set("#ModFilter.Value", component.modFilter);
-        commandBuilder.set("#CategoryFilter.Value", component.categoryFilter);
-        commandBuilder.set("#SortMode.Value", component.sortMode);
-        commandBuilder.set("#FilterCraftable.Value", component.craftableFilter.name());
-        commandBuilder.set("#GridLayout.Value", component.itemListColumns + "x" + component.itemListRows);
-        commandBuilder.set("#ShowHiddenItems #CheckBox.Value", component.showHiddenItems);
-        commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", component.showCreatorInfo);
-        commandBuilder.set("#AltKeybind #CheckBox.Value", component.altKeybind);
+    private void setInputValues(BetterItemViewerComponent settings, UICommandBuilder commandBuilder) {
+        commandBuilder.set("#SearchInput.Value", settings.searchQuery);
+        commandBuilder.set("#ModFilter.Value", settings.modFilter);
+        commandBuilder.set("#CategoryFilter.Value", settings.categoryFilter);
+        commandBuilder.set("#SortMode.Value", settings.sortMode);
+        commandBuilder.set("#FilterCraftable.Value", settings.craftableFilter.name());
+        commandBuilder.set("#GridLayout.Value", settings.itemListColumns + "x" + settings.itemListRows);
+        commandBuilder.set("#ShowHiddenItems #CheckBox.Value", settings.showHiddenItems);
+        commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", settings.showCreatorInfo);
+        commandBuilder.set("#AltKeybind #CheckBox.Value", settings.altKeybind);
         commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
     }
 
@@ -283,6 +273,17 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
         ItemContainer itemContainer = player.getInventory().getCombinedHotbarFirst();
         itemContainer.addItemStack(stack);
+    }
+
+    private void build(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+        if (!ref.isValid()) return;
+        BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+        Player player = store.getComponent(ref, Player.getComponentType());
+        if (player == null) return;
+
+
+        this.buildList(settings, commandBuilder, eventBuilder);
+        this.buildStats(player, settings, commandBuilder, eventBuilder);
     }
 
     private void buildList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
@@ -454,7 +455,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.setObject("#ItemInfoSection.Anchor", itemInfoSectionAnchor);
     }
 
-    private void updateStats(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void buildStats(Player player, BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ItemStats");
         if (settings.selectedItem == null) return;
         Item selectedItem = Item.getAssetMap().getAsset(settings.selectedItem);
@@ -474,7 +475,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         addWeaponInfo(selectedItem, commandBuilder, index);
         addToolInfo(selectedItem, commandBuilder, index);
         addNpcLoot(selectedItem, commandBuilder, index);
-        addRecipes(settings, selectedItem, commandBuilder, eventBuilder);
+        addRecipes(player, settings, selectedItem, commandBuilder, eventBuilder);
+
+        PermissionsModule perms = PermissionsModule.get();
+        Set<String> groups = perms.getGroupsForUser(player.getUuid());
+        GameMode gameMode = player.getGameMode();
+        boolean canCheat = gameMode == GameMode.Creative || groups.contains("OP");
+        commandBuilder.set("#GiveItemButton.Visible", canCheat);
+        commandBuilder.set("#GiveItemStackButton.Visible", canCheat);
 
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveItemButton", EventData.of(KEY_GIVE_ITEM, selectedItem.getId()));
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#GiveItemStackButton", EventData.of(KEY_GIVE_ITEM_STACK, selectedItem.getId()));
@@ -681,16 +689,16 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         addStatsSection(commandBuilder, index, "Mob Loot", lines);
     }
 
-    private void addRecipes(BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+    private void addRecipes(Player player, BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
-        addRecipes(settings, item, commandBuilder, eventBuilder, "Recipes", "#Recipes", itemDetails.craftingRecipes, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
-        addRecipes(settings, item, commandBuilder, eventBuilder, "Usages", "#UsedIn", itemDetails.usageRecipes, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
+        addRecipes(player, settings, commandBuilder, eventBuilder, "Recipes", "#Recipes", itemDetails.craftingRecipes, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
+        addRecipes(player, settings, commandBuilder, eventBuilder, "Usages", "#UsedIn", itemDetails.usageRecipes, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
     }
 
     private void addRecipes(
-        BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder,
-        String title, String tag, Map<String, CraftingRecipe> craftingRecipesById, int currentPage,
-        Consumer<Integer> pageChange, String eventKey
+        Player player, BetterItemViewerComponent settings, UICommandBuilder commandBuilder,
+        UIEventBuilder eventBuilder, String title, String tag, Map<String, CraftingRecipe> craftingRecipesById,
+        int currentPage, Consumer<Integer> pageChange, String eventKey
     ) {
         if (craftingRecipesById.isEmpty()) return;
 
@@ -761,7 +769,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i.getAndIncrement();
 
         for (MaterialQuantity input : recipe.getInput()) {
-            addMaterialQuantity(input, commandBuilder, eventBuilder, tag, true, i);
+            addMaterialQuantity(player, input, commandBuilder, eventBuilder, tag, true, i);
         }
 
         commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #aaaaaa);}");
@@ -769,11 +777,12 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         i.getAndIncrement();
 
         for (MaterialQuantity output : recipe.getOutputs()) {
-            addMaterialQuantity(output, commandBuilder, eventBuilder, tag, false, i);
+            addMaterialQuantity(player, output, commandBuilder, eventBuilder, tag, false, i);
         }
     }
 
-    private void addMaterialQuantity(MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, boolean countInventory, AtomicInteger i) {
+    private void addMaterialQuantity(Player player, MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, boolean countInventory, AtomicInteger i) {
+        Inventory inventory = player.getInventory();
         String itemId = materialQuantity.getItemId();
         String resourceTypeId = materialQuantity.getResourceTypeId();
 

@@ -13,6 +13,7 @@ import com.hypixel.hytale.server.core.entity.entities.player.pages.PageManager;
 import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.gui.BetterItemViewerGui;
@@ -28,24 +29,25 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
         MovementStatesComponent statesComponent = archetypeChunk.getComponent(index, MovementStatesComponent.getComponentType());
         Player player = archetypeChunk.getComponent(index, Player.getComponentType());
         if (player == null) return;
-        Inventory inventory = player.getInventory();
+        World world = player.getWorld();
         MovementStates movementStates = statesComponent.getMovementStates();
         if (movementStates.walking) {
             Ref<EntityStore> ref = player.getReference();
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             if (ref == null || !ref.isValid()) return;
             if (playerRefComponent == null) return;
-
-            BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
-            try {
-                PageManager pageManager = player.getPageManager();
-                if (component.altKeybind && pageManager.getCustomPage() == null) {
-                    pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss, component, inventory));
+            world.execute(() -> {
+                BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+                try {
+                    PageManager pageManager = player.getPageManager();
+                    if (component.altKeybind && pageManager.getCustomPage() == null) {
+                        pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss));
+                    }
+                } catch (Exception e) {
+                    Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                    component.clearFilters();
                 }
-            } catch (Exception e) {
-                Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
-                component.clearFilters();
-            }
+            });
         }
     }
 
