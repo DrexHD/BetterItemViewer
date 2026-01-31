@@ -16,6 +16,8 @@ public class BetterItemViewerConfig {
         .add()
         .append(new KeyedCodec<>("DisableKeybind", Codec.BOOLEAN), (o, i) -> o.disableKeybind = i, o -> o.disableKeybind)
         .add()
+        .append(new KeyedCodec<>("DisableModFilter", Codec.BOOLEAN), (o, i) -> o.disableModFilter = i, o -> o.disableModFilter)
+        .add()
         .append(new KeyedCodec<>("DisableCreatorInfoSetting", Codec.BOOLEAN), (o, i) -> o.disableCreatorInfoSetting = i, o -> o.disableCreatorInfoSetting)
         .add()
         .append(new KeyedCodec<>("DisableHiddenItemsSetting", Codec.BOOLEAN), (o, i) -> o.disableHiddenItemsSetting = i, o -> o.disableHiddenItemsSetting)
@@ -27,6 +29,7 @@ public class BetterItemViewerConfig {
     public boolean defaultAltKeybind = true;
     public boolean disableCommand = false;
     public boolean disableKeybind = false;
+    public boolean disableModFilter = false;
     public boolean disableCreatorInfoSetting = false;
     public boolean disableHiddenItemsSetting = false;
     public Set<String> hiddenQualities = Set.of("Developer", "Tool", "Technical");

@@ -30,7 +30,7 @@ $C.@PageOverlay {
         LayoutMode: Top;
         Padding: (Right: 10);
 
-        Label {
+        Label #ModFilterLabel {
           Text: "Mods";
           Style: (
             FontSize: 18,

@@ -255,6 +255,8 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
 
         BetterItemViewerConfig config = Main.get().getConfig();
+        commandBuilder.set("#ModFilter.Visible", !config.disableModFilter);
+        commandBuilder.set("#ModFilterLabel.Visible", !config.disableModFilter);
         commandBuilder.set("#ShowHiddenItems.Visible", !config.disableHiddenItemsSetting);
         commandBuilder.set("#ShowCreatorInfo.Visible", !config.disableCreatorInfoSetting);
         commandBuilder.set("#AltKeybind.Visible", !config.disableKeybind);
