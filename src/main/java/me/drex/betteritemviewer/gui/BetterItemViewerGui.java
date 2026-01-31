@@ -304,7 +304,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             int qualityIndex = item.getQualityIndex();
             ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
 
-            if (quality != null && (quality.isHiddenFromSearch() || quality.getId().equals("Developer")) && !settings.showHiddenItems) {
+            if (quality != null && (quality.isHiddenFromSearch() || Main.get().getConfig().hiddenQualities.contains(quality.getId())) && !settings.showHiddenItems) {
                 return true;
             }
 

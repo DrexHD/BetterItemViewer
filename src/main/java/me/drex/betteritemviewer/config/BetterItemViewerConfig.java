@@ -3,6 +3,10 @@ package me.drex.betteritemviewer.config;
 import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
+import com.hypixel.hytale.codec.codecs.set.SetCodec;
+
+import java.util.HashSet;
+import java.util.Set;
 
 public class BetterItemViewerConfig {
     public static final BuilderCodec<BetterItemViewerConfig> CODEC = BuilderCodec.builder(BetterItemViewerConfig.class, BetterItemViewerConfig::new)
@@ -16,6 +20,8 @@ public class BetterItemViewerConfig {
         .add()
         .append(new KeyedCodec<>("DisableHiddenItemsSetting", Codec.BOOLEAN), (o, i) -> o.disableHiddenItemsSetting = i, o -> o.disableHiddenItemsSetting)
         .add()
+        .append(new KeyedCodec<>("HiddenQualities", new SetCodec<>(Codec.STRING, HashSet::new, true)), (o, i) -> o.hiddenQualities = i, o -> o.hiddenQualities)
+        .add()
         .build();
 
     public boolean defaultAltKeybind = true;
@@ -23,4 +29,5 @@ public class BetterItemViewerConfig {
     public boolean disableKeybind = false;
     public boolean disableCreatorInfoSetting = false;
     public boolean disableHiddenItemsSetting = false;
+    public Set<String> hiddenQualities = Set.of("Developer", "Tool", "Technical");
 }
