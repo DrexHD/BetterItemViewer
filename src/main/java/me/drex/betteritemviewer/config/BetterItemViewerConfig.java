@@ -8,7 +8,10 @@ public class BetterItemViewerConfig {
     public static final BuilderCodec<BetterItemViewerConfig> CODEC = BuilderCodec.builder(BetterItemViewerConfig.class, BetterItemViewerConfig::new)
         .append(new KeyedCodec<>("DefaultAltKeyBind", Codec.BOOLEAN), (o, i) -> o.defaultAltKeybind = i, o -> o.defaultAltKeybind)
         .add()
+        .append(new KeyedCodec<>("DisableCommand", Codec.BOOLEAN), (o, i) -> o.disableCommand = i, o -> o.disableCommand)
+        .add()
         .build();
 
     public boolean defaultAltKeybind = true;
+    public boolean disableCommand = false;
 }

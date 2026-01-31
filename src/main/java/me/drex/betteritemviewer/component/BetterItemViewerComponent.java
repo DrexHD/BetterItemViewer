@@ -10,7 +10,6 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.Main;
 
 import javax.annotation.Nullable;
-import java.util.Objects;
 
 public class BetterItemViewerComponent implements Component<EntityStore> {
 
@@ -63,10 +62,10 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public boolean showSalvagerRecipes = false;
     public boolean showHiddenItems = false;
     public boolean showCreatorInfo = false;
-    public boolean altKeybind = Main.getInstance().config.get().defaultAltKeybind;
+    public boolean altKeybind = Main.get().getConfig().defaultAltKeybind;
 
     public static ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
-        return Main.getInstance().getComponentType();
+        return Main.get().getComponentType();
     }
 
     private BetterItemViewerComponent() {

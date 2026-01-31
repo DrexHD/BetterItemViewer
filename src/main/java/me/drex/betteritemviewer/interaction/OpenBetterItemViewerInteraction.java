@@ -42,7 +42,7 @@ public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
                 try {
                     player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss));
                 } catch (Exception e) {
-                    Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                    Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                     settings.clearFilters();
                 }
             });

@@ -23,10 +23,10 @@ public class Main extends JavaPlugin {
 
     private static Main instance;
 
-    public final Config<BetterItemViewerConfig> config = this.withConfig("BetterItemViewer", BetterItemViewerConfig.CODEC);
+    private final Config<BetterItemViewerConfig> config = this.withConfig("BetterItemViewer", BetterItemViewerConfig.CODEC);
     private ComponentType<EntityStore, BetterItemViewerComponent> componentType;
 
-    public static Main getInstance() {
+    public static Main get() {
         return instance;
     }
 
@@ -50,6 +50,10 @@ public class Main extends JavaPlugin {
         this.getEntityStoreRegistry().registerSystem(new CheckKeybindSystem());
         Interaction.CODEC.register("OpenBetterItemViewer", OpenBetterItemViewerInteraction.class, OpenBetterItemViewerInteraction.CODEC);
 
+    }
+
+    public BetterItemViewerConfig getConfig() {
+        return config.get();
     }
 
     private static void onReady(AllWorldsLoadedEvent event) {

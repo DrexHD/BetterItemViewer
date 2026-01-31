@@ -48,7 +48,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
                         player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss));
                     } catch (Exception e) {
                         player.sendMessage(Message.raw("An error occurred while opening the GUI."));
-                        Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                        Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                         settings.clearFilters();
                     }
                 }, world);
@@ -59,5 +59,10 @@ public class BetterItemViewerCommand extends AbstractCommand {
         } else {
             return CompletableFuture.completedFuture(null);
         }
+    }
+
+    @Override
+    public boolean hasPermission(@Nonnull CommandSender sender) {
+        return !Main.get().getConfig().disableCommand && super.hasPermission(sender);
     }
 }

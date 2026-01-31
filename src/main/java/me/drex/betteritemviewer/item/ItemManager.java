@@ -145,7 +145,7 @@ public class ItemManager {
                 }
             }
         } catch (Exception e) {
-            Main.getInstance().getLogger().at(Level.SEVERE).withCause(e).log("Failed to parse item damage interactions for item " + id + ":");
+            Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to parse item damage interactions for item " + id + ":");
         }
 
         return damageInteractions;
