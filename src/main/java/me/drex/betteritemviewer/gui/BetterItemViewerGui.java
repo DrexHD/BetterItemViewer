@@ -41,7 +41,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
+import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
+import me.drex.betteritemviewer.config.BetterItemViewerConfig;
 import me.drex.betteritemviewer.item.ItemDetails;
 import me.drex.betteritemviewer.item.ItemManager;
 import me.drex.betteritemviewer.item.Range;
@@ -251,6 +253,11 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", settings.showCreatorInfo);
         commandBuilder.set("#AltKeybind #CheckBox.Value", settings.altKeybind);
         commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
+
+        BetterItemViewerConfig config = Main.get().getConfig();
+        commandBuilder.set("#ShowHiddenItems.Visible", !config.disableHiddenItemsSetting);
+        commandBuilder.set("#ShowCreatorInfo.Visible", !config.disableCreatorInfoSetting);
+        commandBuilder.set("#AltKeybind.Visible", !config.disableKeybind);
     }
 
     private void giveItem(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, String itemId, boolean maxStack) {
