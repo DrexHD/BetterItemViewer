@@ -10,8 +10,11 @@ public class BetterItemViewerConfig {
         .add()
         .append(new KeyedCodec<>("DisableCommand", Codec.BOOLEAN), (o, i) -> o.disableCommand = i, o -> o.disableCommand)
         .add()
+        .append(new KeyedCodec<>("DisableKeybind", Codec.BOOLEAN), (o, i) -> o.disableKeybind = i, o -> o.disableKeybind)
+        .add()
         .build();
 
     public boolean defaultAltKeybind = true;
     public boolean disableCommand = false;
+    public boolean disableKeybind = false;
 }

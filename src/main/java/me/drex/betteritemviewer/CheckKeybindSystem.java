@@ -29,7 +29,7 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
         if (player == null) return;
         World world = player.getWorld();
         MovementStates movementStates = statesComponent.getMovementStates();
-        if (movementStates.walking) {
+        if (movementStates.walking && !Main.get().getConfig().disableKeybind) {
             Ref<EntityStore> ref = player.getReference();
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             if (ref == null || !ref.isValid()) return;
