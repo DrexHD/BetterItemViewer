@@ -34,8 +34,8 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             if (ref == null || !ref.isValid()) return;
             if (playerRefComponent == null) return;
+            BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
             world.execute(() -> {
-                BetterItemViewerComponent component = commandBuffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                 try {
                     PageManager pageManager = player.getPageManager();
                     if (component.altKeybind && pageManager.getCustomPage() == null) {

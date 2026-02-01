@@ -676,7 +676,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 statModifiers.forEach((entityStatTypeIndex, staticModifiers) -> {
                     EntityStatType entityStatType = EntityStatType.getAssetMap().getAsset(entityStatTypeIndex);
                     for (StaticModifier staticModifier : staticModifiers) {
-                        lines.add(Message.raw(entityStatType.getId() + ": ").insert(Message.raw("+" + formatStaticModifier(staticModifier)).color("#eeeeaa")));
+                        lines.add(Message.raw(entityStatType.getId() + ": ").insert(Message.raw(formatStaticModifier(staticModifier)).color("#eeeeaa")));
                     }
                 });
             }
