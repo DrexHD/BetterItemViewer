@@ -688,14 +688,25 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
 
     private void addNpcLoot(Item item, UICommandBuilder commandBuilder, AtomicInteger index) {
         ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
-        List<Message> lines = new ArrayList<>();
+        if (itemDetails.mobLoot.isEmpty()) return;
 
-        itemDetails.mobLoot.forEach((role, drop) -> {
-            lines.add(Message.translation(role).insert(": ").insert(Message.raw(drop.format()).color("#77ee77")));
+        AtomicInteger i = new AtomicInteger();
+        String tag = "#MobLoot";
+        commandBuilder.appendInline("#ItemStats", "Group " + tag + " {LayoutMode: Top; Padding: (Top: 12);}");
+        commandBuilder.appendInline(tag, "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
+        commandBuilder.set(tag + "[" + i + "].TextSpans", Message.raw("Mob Loot"));
+        i.getAndIncrement();
+
+
+        itemDetails.mobLoot.forEach((roleName, mobDropDetails) -> {
+            commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RoleEntry.ui");
+            commandBuilder.set(tag + "[" + i.get() + "] #RoleIcon.AssetPath", "UI/Custom/Pages/Memories/npcs/" + roleName + ".png");
+            commandBuilder.set(tag + "[" + i.get() + "] #RoleName.TextSpans", Message.translation(mobDropDetails.translationKey()));
+            commandBuilder.set(tag + "[" + i.get() + "] #DropItemQuantity.TextSpans", Message.raw(mobDropDetails.range().format() + " Items").color("#aaaaaa"));
+            i.getAndIncrement();
         });
 
-        if (lines.isEmpty()) return;
-        addStatsSection(commandBuilder, index, "Mob Loot", lines);
+        index.getAndIncrement();
     }
 
     private void addRecipes(Player player, BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
@@ -727,7 +738,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         AtomicInteger i = new AtomicInteger();
         commandBuilder.appendInline("#ItemStats", "Group " + tag + " {LayoutMode: Top; Padding: (Top: 12);}");
         commandBuilder.appendInline(tag, "Label {Style: (FontSize: 20, TextColor: #ffffff);}");
-        commandBuilder.set(tag + "[" + i + "].TextSpans", Message.raw(title).bold(true));
+        commandBuilder.set(tag + "[" + i + "].TextSpans", Message.raw(title));
         i.getAndIncrement();
 
         if (currentPage >= craftingRecipes.size()) {

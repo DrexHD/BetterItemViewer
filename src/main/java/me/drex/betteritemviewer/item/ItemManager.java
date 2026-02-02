@@ -24,9 +24,12 @@ import com.hypixel.hytale.server.npc.entities.NPCEntity;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.systems.PositionCacheSystems;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
+import com.hypixel.hytale.server.npc.util.expression.Scope;
+import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import it.unimi.dsi.fastutil.Pair;
 import me.drex.betteritemviewer.Main;
 
+import javax.annotation.Nonnull;
 import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
@@ -178,6 +181,11 @@ public class ItemManager {
                         NPCPlugin.get().getBuilderManager(), npcComponent, holder, new ExecutionContext(), roleBuilder, null
                     );
                     Role role = NPCPlugin.buildRole(roleBuilder, builderInfo, builderSupport, roleIndex);
+                    String memoryName = role.getAppearanceName();
+                    String memoriesNameOverride = getMemoriesNameOverride(roleBuilder);
+                    if (memoriesNameOverride != null && !memoriesNameOverride.isEmpty()) {
+                        memoryName = memoriesNameOverride;
+                    }
                     PositionCacheSystems.initialisePositionCache(role, builderSupport.getStateEvaluator(), 0.0);
                     String dropListId = role.getDropListId();
                     if (dropListId == null) continue;
@@ -191,7 +199,7 @@ public class ItemManager {
                     for (ItemDrop drop : drops) {
                         String itemId = drop.getItemId();
                         ItemDetails itemDetails = getOrCreateDetails(itemId);
-                        itemDetails.mobLoot.put(role.getNameTranslationKey(), new Range(drop.getQuantityMin(), drop.getQuantityMax()));
+                        itemDetails.mobLoot.put(memoryName, new MobDropDetails(role.getNameTranslationKey(), new Range(drop.getQuantityMin(), drop.getQuantityMax())));
                     }
                 } catch (Throwable t) {
                     npcPlugin.getLogger().at(Level.WARNING).log("Error spawning role " + roleName + ": " + t.getMessage());
@@ -199,6 +207,18 @@ public class ItemManager {
             }
 
             npcComponent.remove();
+        }
+    }
+
+    // Copied from NPCMemoryProvider.getMemoriesNameOverride
+    private static String getMemoriesNameOverride(@Nonnull Builder<?> builder) {
+        if (builder instanceof ISpawnableWithModel spawnableWithModel) {
+            ExecutionContext executionContext = new ExecutionContext();
+            executionContext.setScope(spawnableWithModel.createExecutionScope());
+            Scope modifierScope = spawnableWithModel.createModifierScope(executionContext);
+            return spawnableWithModel.getMemoriesNameOverride(executionContext, modifierScope);
+        } else {
+            return null;
         }
     }
 }

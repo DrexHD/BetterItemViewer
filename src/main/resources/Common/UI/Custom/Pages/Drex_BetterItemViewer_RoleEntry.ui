@@ -1,0 +1,32 @@
+$C = "../Common.ui";
+
+Group {
+  Padding: (Full: 4);
+  LayoutMode: Left;
+  Background: (Color: #252525(0.5));
+
+  AssetImage #RoleIcon {
+    Anchor: (Width: 48, Height: 48);
+  }
+
+  Group {
+    Padding: (Left: 8);
+    LayoutMode: Top;
+
+    Label #RoleName {
+      Style: (
+        Alignment: Center,
+        FontSize: 18,
+        TextColor: #dddddd,
+        RenderBold: true
+      );
+    }
+
+    Label #DropItemQuantity {
+      Style: (
+        FontSize: 15,
+        TextColor: #aaaaaa
+      );
+    }
+  }
+}

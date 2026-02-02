@@ -16,6 +16,7 @@ import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.config.BetterItemViewerConfig;
 import me.drex.betteritemviewer.interaction.OpenBetterItemViewerInteraction;
 import me.drex.betteritemviewer.item.ItemManager;
+import me.drex.betteritemviewer.system.CheckKeybindSystem;
 
 import javax.annotation.Nonnull;
 
