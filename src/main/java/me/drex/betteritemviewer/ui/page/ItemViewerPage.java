@@ -1,4 +1,4 @@
-package me.drex.betteritemviewer.gui;
+package me.drex.betteritemviewer.ui.page;
 
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.codec.Codec;
@@ -47,6 +47,7 @@ import me.drex.betteritemviewer.config.BetterItemViewerConfig;
 import me.drex.betteritemviewer.item.ItemDetails;
 import me.drex.betteritemviewer.item.ItemManager;
 import me.drex.betteritemviewer.item.Range;
+import me.drex.betteritemviewer.ui.hud.HudUtils;
 
 import javax.annotation.Nonnull;
 import java.awt.*;
@@ -56,10 +57,11 @@ import java.util.List;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
+import java.util.stream.Collectors;
 
-import static me.drex.betteritemviewer.gui.BetterItemViewerGui.GuiData.*;
+import static me.drex.betteritemviewer.ui.page.ItemViewerPage.GuiData.*;
 
-public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewerGui.GuiData> {
+public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiData> {
     public static final Function<PlayerRef, Comparator<Item>> NAME_COMPARATOR = playerRef ->
         Comparator.comparing(item ->
             Objects.requireNonNullElse(
@@ -103,7 +105,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }};
     private static final String RESET_FILTERS_ACTION = "ResetFilters";
 
-    public BetterItemViewerGui(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
+    public ItemViewerPage(@Nonnull PlayerRef playerRef, @Nonnull CustomPageLifetime lifetime) {
         super(playerRef, lifetime, GuiData.CODEC);
     }
 
@@ -157,6 +159,15 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             giveItem(ref, store, data.giveItemStack, true);
         }
 
+        if (data.pinRecipe != null) {
+            if (settings.pinnedRecipes.contains(data.pinRecipe)) {
+                settings.pinnedRecipes.remove(data.pinRecipe);
+            } else {
+                settings.pinnedRecipes.add(data.pinRecipe);
+            }
+            HudUtils.updateHud(ref);
+        }
+
         if (data.recipeInPage != null) {
             try {
                 settings.selectedRecipeInPage += Integer.parseInt(data.recipeInPage);
@@ -199,6 +210,14 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         if (data.craftableFilter != null) {
             try {
                 settings.craftableFilter = BetterItemViewerComponent.Filter.valueOf(data.craftableFilter);
+            } catch (Exception _) {
+            }
+            settings.selectedPage = 0;
+        }
+
+        if (data.pinnedFilter != null) {
+            try {
+                settings.pinnedFilter = BetterItemViewerComponent.Filter.valueOf(data.pinnedFilter);
             } catch (Exception _) {
             }
             settings.selectedPage = 0;
@@ -248,6 +267,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         commandBuilder.set("#CategoryFilter.Value", settings.categoryFilter);
         commandBuilder.set("#SortMode.Value", settings.sortMode);
         commandBuilder.set("#FilterCraftable.Value", settings.craftableFilter.name());
+        commandBuilder.set("#FilterPinned.Value", settings.pinnedFilter.name());
         commandBuilder.set("#GridLayout.Value", settings.itemListColumns + "x" + settings.itemListRows);
         commandBuilder.set("#ShowHiddenItems #CheckBox.Value", settings.showHiddenItems);
         commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", settings.showCreatorInfo);
@@ -298,6 +318,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
     private void buildList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         List<Item> items = new LinkedList<>(Item.getAssetMap().getAssetMap().values());
         Set<String> modItems = Item.getAssetMap().getKeysForPack(settings.modFilter);
+        Set<String> pinnedOutputItems = settings.pinnedRecipes.stream()
+            .map(key -> CraftingRecipe.getAssetMap().getAsset(key))
+            .filter(Objects::nonNull)
+            .flatMap(craftingRecipe -> Arrays.stream(craftingRecipe.getOutputs()))
+            .map(MaterialQuantity::getItemId)
+            .filter(Objects::nonNull)
+            .collect(Collectors.toSet());
 
         items.removeIf(item -> {
             if (item.getId().equals("Unknown")) return true;
@@ -334,6 +361,15 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
                 if (hasRecipe && settings.craftableFilter == BetterItemViewerComponent.Filter.NO) {
                     return true;
                 } else if (!hasRecipe && settings.craftableFilter == BetterItemViewerComponent.Filter.YES) {
+                    return true;
+                }
+            }
+
+            if (settings.pinnedFilter != BetterItemViewerComponent.Filter.ALL) {
+                boolean isPinned = pinnedOutputItems.contains(item.getId());
+                if (isPinned && settings.pinnedFilter == BetterItemViewerComponent.Filter.NO) {
+                    return true;
+                } else if (!isPinned && settings.pinnedFilter == BetterItemViewerComponent.Filter.YES) {
                     return true;
                 }
             }
@@ -431,6 +467,13 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
         commandBuilder.set("#FilterCraftable.Entries", craftable);
 
+        // Pinned
+        ObjectArrayList<DropdownEntryInfo> pinned = new ObjectArrayList<>();
+        for (BetterItemViewerComponent.Filter value : BetterItemViewerComponent.Filter.values()) {
+            pinned.add(new DropdownEntryInfo(LocalizableString.fromString("Pinned: " + value.name()), value.name()));
+        }
+        commandBuilder.set("#FilterPinned.Entries", pinned);
+
 
         // Grid Layout
         ObjectArrayList<DropdownEntryInfo> gridLayouts = new ObjectArrayList<>();
@@ -448,6 +491,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#CategoryFilter", EventData.of(KEY_CATEGORY_FILTER, "#CategoryFilter.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#SortMode", EventData.of(KEY_SORT_MODE, "#SortMode.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FilterCraftable", EventData.of(KEY_CRAFTABLE_FILTER, "#FilterCraftable.Value"));
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#FilterPinned", EventData.of(KEY_PINNED_FILTER, "#FilterPinned.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#GridLayout", EventData.of(KEY_GRID_LAYOUT, "#GridLayout.Value"));
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetFiltersButton", EventData.of(KEY_ACTION, RESET_FILTERS_ACTION));
 
@@ -759,6 +803,16 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         }
 
         CraftingRecipe recipe = craftingRecipes.get(currentPage);
+
+        commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RecipePin.ui");
+        if (settings.pinnedRecipes.contains(recipe.getId())) {
+            commandBuilder.set(tag + "[" + i + "] #PinRecipeButton.Text", "Unpin Recipe");
+        } else {
+            commandBuilder.set(tag + "[" + i + "] #PinRecipeButton.Text", "Pin Recipe");
+        }
+        eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, tag + "[" + i + "] #PinRecipeButton", EventData.of(KEY_PIN_RECIPE, recipe.getId()));
+        i.getAndIncrement();
+
         BenchRequirement[] benchRequirements = recipe.getBenchRequirement();
         if (benchRequirements != null && benchRequirements.length > 0) {
             for (BenchRequirement benchRequirement : recipe.getBenchRequirement()) {
@@ -973,6 +1027,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_MOD_FILTER = "@ModFilter";
         static final String KEY_CATEGORY_FILTER = "@CategoryFilter";
         static final String KEY_CRAFTABLE_FILTER = "@CraftableFilter";
+        static final String KEY_PINNED_FILTER = "@PinnedFilter";
         static final String KEY_GRID_LAYOUT = "@GridLayout";
         static final String KEY_SORT_MODE = "@SortMode";
         static final String KEY_ALT_KEYBIND = "@AltKeybind";
@@ -984,6 +1039,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         static final String KEY_GIVE_ITEM = "GiveItem";
         static final String KEY_GIVE_ITEM_STACK = "GiveItemStack";
         static final String KEY_LIST_PAGE = "ListPage";
+        static final String KEY_PIN_RECIPE = "PinRecipe";
         static final String KEY_RECIPE_IN_PAGE = "RecipeInPage";
         static final String KEY_RECIPE_OUT_PAGE = "RecipeOutPage";
         static final String KEY_ACTION = "Action";
@@ -992,6 +1048,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_MOD_FILTER, Codec.STRING), (guiData, s) -> guiData.modFilter = s, guiData -> guiData.modFilter)
             .addField(new KeyedCodec<>(KEY_CATEGORY_FILTER, Codec.STRING), (guiData, s) -> guiData.categoryFilter = s, guiData -> guiData.categoryFilter)
             .addField(new KeyedCodec<>(KEY_CRAFTABLE_FILTER, Codec.STRING), (guiData, s) -> guiData.craftableFilter = s, guiData -> guiData.craftableFilter)
+            .addField(new KeyedCodec<>(KEY_PINNED_FILTER, Codec.STRING), (guiData, s) -> guiData.pinnedFilter = s, guiData -> guiData.pinnedFilter)
             .addField(new KeyedCodec<>(KEY_GRID_LAYOUT, Codec.STRING), (guiData, s) -> guiData.gridLayout = s, guiData -> guiData.gridLayout)
             .addField(new KeyedCodec<>(KEY_SORT_MODE, Codec.STRING), (guiData, s) -> guiData.sortMode = s, guiData -> guiData.sortMode)
             .addField(new KeyedCodec<>(KEY_ALT_KEYBIND, Codec.BOOLEAN), (guiData, s) -> guiData.altKeybind = s, guiData -> guiData.altKeybind)
@@ -1003,6 +1060,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM_STACK, Codec.STRING), (guiData, s) -> guiData.giveItemStack = s, guiData -> guiData.giveItemStack)
             .addField(new KeyedCodec<>(KEY_LIST_PAGE, Codec.STRING), (guiData, s) -> guiData.listPage = s, guiData -> guiData.listPage)
+            .addField(new KeyedCodec<>(KEY_PIN_RECIPE, Codec.STRING), (guiData, s) -> guiData.pinRecipe = s, guiData -> guiData.pinRecipe)
             .addField(new KeyedCodec<>(KEY_RECIPE_IN_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeInPage = s, guiData -> guiData.recipeInPage)
             .addField(new KeyedCodec<>(KEY_RECIPE_OUT_PAGE, Codec.STRING), (guiData, s) -> guiData.recipeOutPage = s, guiData -> guiData.recipeOutPage)
             .addField(new KeyedCodec<>(KEY_ACTION, Codec.STRING), (guiData, s) -> guiData.action = s, guiData -> guiData.action)
@@ -1016,6 +1074,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private String modFilter;
         private String categoryFilter;
         private String craftableFilter;
+        public String pinnedFilter;
         private String gridLayout;
         private String sortMode;
         private Boolean altKeybind;
@@ -1023,6 +1082,7 @@ public class BetterItemViewerGui extends InteractiveCustomUIPage<BetterItemViewe
         private Boolean showHiddenItems;
         private Boolean showCreatorInfo;
         private String listPage;
+        private String pinRecipe;
         private String recipeInPage;
         private String recipeOutPage;
         private String action;

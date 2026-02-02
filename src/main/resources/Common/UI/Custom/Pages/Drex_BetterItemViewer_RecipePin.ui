@@ -1,0 +1,16 @@
+$C = "../Common.ui";
+
+Group {
+  LayoutMode: Left;
+
+  TextButton #PinRecipeButton {
+    Anchor: (Height: 24);
+    Text: "Pin Recipe";
+    Style: (
+      ...$C.@SecondaryTextButtonStyle,
+      Sounds: $C.@ButtonSounds
+    );
+    Background: #1a1a1a(0.6);
+    Padding: (Full: 8);
+  }
+}

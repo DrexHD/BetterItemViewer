@@ -15,7 +15,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
-import me.drex.betteritemviewer.gui.BetterItemViewerGui;
+import me.drex.betteritemviewer.ui.page.ItemViewerPage;
 
 import javax.annotation.Nonnull;
 import java.util.logging.Level;
@@ -40,7 +40,7 @@ public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
             BetterItemViewerComponent settings = buffer.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
             world.execute(() -> {
                 try {
-                    player.getPageManager().openCustomPage(ref, store, new BetterItemViewerGui(playerRef, CustomPageLifetime.CanDismiss));
+                    player.getPageManager().openCustomPage(ref, store, new ItemViewerPage(playerRef, CustomPageLifetime.CanDismiss));
                 } catch (Exception e) {
                     Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                     settings.clearFilters();

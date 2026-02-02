@@ -18,12 +18,15 @@ javadoc {
 
 repositories {
     mavenCentral()
+    maven { url "https://maven.hytale-mods.dev/releases" }
 }
 
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
     implementation(files("${project.hytaleHome}/release/package/game/latest/Server/HytaleServer.jar"))
+
+    implementation "com.buuz135:MultipleHUD:1.0.4"
 }
 
 test {

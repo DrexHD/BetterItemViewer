@@ -16,7 +16,7 @@ import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.Main;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
-import me.drex.betteritemviewer.gui.BetterItemViewerGui;
+import me.drex.betteritemviewer.ui.page.ItemViewerPage;
 
 import javax.annotation.Nonnull;
 import javax.annotation.Nullable;
@@ -40,7 +40,7 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
                 try {
                     PageManager pageManager = player.getPageManager();
                     if (component.altKeybind && pageManager.getCustomPage() == null) {
-                        pageManager.openCustomPage(ref, store, new BetterItemViewerGui(playerRefComponent, CustomPageLifetime.CanDismiss));
+                        pageManager.openCustomPage(ref, store, new ItemViewerPage(playerRefComponent, CustomPageLifetime.CanDismiss));
                     }
                 } catch (Exception e) {
                     Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");

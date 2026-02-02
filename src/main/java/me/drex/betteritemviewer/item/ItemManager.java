@@ -68,7 +68,7 @@ public class ItemManager {
             if (itemId != null) {
                 ItemDetails itemDetails = getOrCreateDetails(itemId);
                 itemDetails.usageRecipes.put(id, craftingRecipe);
-            } else if (resourceTypeId != null) {
+            } /*else if (resourceTypeId != null) {
                 for (Item item : Item.getAssetMap().getAssetMap().values()) {
                     ItemResourceType[] resourceTypes = item.getResourceTypes();
                     if (resourceTypes == null) continue;
@@ -79,7 +79,7 @@ public class ItemManager {
                         }
                     }
                 }
-            }
+            }*/
         }
     }
 

@@ -81,14 +81,14 @@ $C.@PageOverlay {
           Anchor: (Width: 280, Height: 30);
         }
 
-        Group {
-          Padding: (Top: 10);
+        $C.@DropdownBox #FilterPinned {
+          Anchor: (Width: 280, Height: 30, Top: 2);
         }
 
         TextButton #ResetFiltersButton {
           TextTooltipStyle: $C.@DefaultTextTooltipStyle;
           TooltipText: "Reset all active item filters";
-          Anchor: (Width: 140, Height: 24);
+          Anchor: (Width: 140, Height: 24, Left: 0, Top: 10);
           Text: "Reset Filters";
           Style: (
             ...$C.@CancelTextButtonStyle

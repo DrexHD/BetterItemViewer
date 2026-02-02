@@ -3,17 +3,22 @@ package me.drex.betteritemviewer;
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.component.ComponentType;
+import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
+import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
+import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
+import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.events.AllWorldsLoadedEvent;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import me.drex.betteritemviewer.command.BetterItemViewerCommand;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.config.BetterItemViewerConfig;
+import me.drex.betteritemviewer.ui.hud.HudUtils;
 import me.drex.betteritemviewer.interaction.OpenBetterItemViewerInteraction;
 import me.drex.betteritemviewer.item.ItemManager;
 import me.drex.betteritemviewer.system.CheckKeybindSystem;
@@ -48,9 +53,22 @@ public class Main extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, Main::onRecipeLoad);
         this.getEventRegistry().register(AllWorldsLoadedEvent.class, Main::onReady);
+        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, Main::onPlayerReady);
+        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, Main::onInventoryChange);
         this.getEntityStoreRegistry().registerSystem(new CheckKeybindSystem());
         Interaction.CODEC.register("OpenBetterItemViewer", OpenBetterItemViewerInteraction.class, OpenBetterItemViewerInteraction.CODEC);
+    }
 
+    private static void onInventoryChange(LivingEntityInventoryChangeEvent event) {
+        World world = event.getEntity().getWorld();
+        world.execute(() -> {
+            HudUtils.updateHud(event.getEntity().getReference());
+        });
+    }
+
+    private static void onPlayerReady(PlayerReadyEvent event) {
+        Ref<EntityStore> ref = event.getPlayerRef();
+        HudUtils.updateHud(ref);
     }
 
     public BetterItemViewerConfig getConfig() {
