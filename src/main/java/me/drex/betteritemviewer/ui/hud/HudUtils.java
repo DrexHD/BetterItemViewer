@@ -7,6 +7,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.plugin.PluginManager;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
+import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 
 public class HudUtils {
     public static final PluginIdentifier MULTIPLE_HUD = new PluginIdentifier("Buuz135", "MultipleHUD");
@@ -18,7 +19,9 @@ public class HudUtils {
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) return;
-        PinnedRecipesHud pinnedRecipesHud = new PinnedRecipesHud(playerRef);
+        BetterItemViewerComponent viewerComponent = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+
+        PinnedRecipesHud pinnedRecipesHud = new PinnedRecipesHud(playerRef, viewerComponent.pinnedRecipes, player.getInventory());
         if (PluginManager.get().getPlugin(MULTIPLE_HUD) != null) {
             com.buuz135.mhud.MultipleHUD.getInstance().setCustomHud(player, playerRef, "BetterItemViewer", pinnedRecipesHud);
         } else {

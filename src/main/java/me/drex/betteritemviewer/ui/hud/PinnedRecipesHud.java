@@ -1,27 +1,31 @@
 package me.drex.betteritemviewer.ui.hud;
 
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
-import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
 import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 
 import javax.annotation.Nonnull;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 public class PinnedRecipesHud extends CustomUIHud {
-    public PinnedRecipesHud(@Nonnull PlayerRef playerRef) {
+
+    private final Set<String> pinnedRecipes;
+    private final Inventory inventory;
+
+    public PinnedRecipesHud(@Nonnull PlayerRef playerRef, Set<String> pinnedRecipes, Inventory inventory) {
         super(playerRef);
+        this.pinnedRecipes = pinnedRecipes;
+        this.inventory = inventory;
     }
 
     @Override
@@ -31,17 +35,13 @@ public class PinnedRecipesHud extends CustomUIHud {
         if (ref == null || !ref.isValid()) {
             return;
         }
-        Store<EntityStore> store = ref.getStore();
-        Player player = store.getComponent(ref, Player.getComponentType());
-        if (player == null) return;
-        BetterItemViewerComponent component = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
         AtomicInteger index = new AtomicInteger(0);
-        for (String pinnedRecipe : component.pinnedRecipes) {
-            buildRecipe(player, pinnedRecipe, commandBuilder, index);
+        for (String pinnedRecipe : pinnedRecipes) {
+            buildRecipe(pinnedRecipe, commandBuilder, index);
         }
     }
 
-    public void buildRecipe(Player player, String pinnedRecipe, UICommandBuilder commandBuilder, AtomicInteger index) {
+    public void buildRecipe(String pinnedRecipe, UICommandBuilder commandBuilder, AtomicInteger index) {
         CraftingRecipe recipe = CraftingRecipe.getAssetMap().getAsset(pinnedRecipe);
         if (recipe == null) return;
 
@@ -55,7 +55,7 @@ public class PinnedRecipesHud extends CustomUIHud {
         commandBuilder.appendInline(recipeTag + " #InputItems", "Group " + tag + " {LayoutMode: Top;}");
 
         for (MaterialQuantity materialQuantity : recipe.getInput()) {
-            addMaterialQuantity(player, materialQuantity, commandBuilder, recipeTag + " " + tag, i);
+            addMaterialQuantity(materialQuantity, commandBuilder, recipeTag + " " + tag, i);
         }
 
         for (MaterialQuantity output : recipe.getOutputs()) {
@@ -68,8 +68,7 @@ public class PinnedRecipesHud extends CustomUIHud {
 
     }
 
-    private void addMaterialQuantity(Player player, MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, String tag, AtomicInteger i) {
-        Inventory inventory = player.getInventory();
+    private void addMaterialQuantity(MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, String tag, AtomicInteger i) {
         String itemId = materialQuantity.getItemId();
         String resourceTypeId = materialQuantity.getResourceTypeId();
 
