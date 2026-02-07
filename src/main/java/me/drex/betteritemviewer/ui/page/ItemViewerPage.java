@@ -269,6 +269,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         commandBuilder.set("#FilterCraftable.Value", settings.craftableFilter.name());
         commandBuilder.set("#FilterPinned.Value", settings.pinnedFilter.name());
         commandBuilder.set("#GridLayout.Value", settings.itemListColumns + "x" + settings.itemListRows);
+        commandBuilder.set("#ShowSalvager #CheckBox.Value", settings.showSalvagerRecipes);
         commandBuilder.set("#ShowHiddenItems #CheckBox.Value", settings.showHiddenItems);
         commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", settings.showCreatorInfo);
         commandBuilder.set("#AltKeybind #CheckBox.Value", settings.altKeybind);

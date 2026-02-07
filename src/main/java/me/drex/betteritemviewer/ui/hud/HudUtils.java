@@ -15,14 +15,14 @@ public class HudUtils {
         if (ref == null || !ref.isValid()) return;
         Store<EntityStore> store = ref.getStore();
 
-        // TODO MultiHud
         Player player = store.getComponent(ref, Player.getComponentType());
         PlayerRef playerRef = store.getComponent(ref, PlayerRef.getComponentType());
         if (player == null || playerRef == null) return;
+        PinnedRecipesHud pinnedRecipesHud = new PinnedRecipesHud(playerRef);
         if (PluginManager.get().getPlugin(MULTIPLE_HUD) != null) {
-            com.buuz135.mhud.MultipleHUD.getInstance().setCustomHud(player, playerRef, "BetterItemViewer", new PinnedRecipesHud(playerRef));
+            com.buuz135.mhud.MultipleHUD.getInstance().setCustomHud(player, playerRef, "BetterItemViewer", pinnedRecipesHud);
         } else {
-            player.getHudManager().setCustomHud(playerRef, new PinnedRecipesHud(playerRef));
+            player.getHudManager().setCustomHud(playerRef, pinnedRecipesHud);
         }
 
     }
