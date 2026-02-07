@@ -12,7 +12,7 @@ import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import me.drex.betteritemviewer.Main;
+import me.drex.betteritemviewer.BetterItemViewerPlugin;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.ui.page.ItemViewerPage;
 
@@ -48,7 +48,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
                         player.getPageManager().openCustomPage(ref, store, new ItemViewerPage(playerRefComponent, CustomPageLifetime.CanDismiss));
                     } catch (Exception e) {
                         player.sendMessage(Message.raw("An error occurred while opening the GUI."));
-                        Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                        BetterItemViewerPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                         settings.clearFilters();
                     }
                 }, world);
@@ -63,6 +63,6 @@ public class BetterItemViewerCommand extends AbstractCommand {
 
     @Override
     public boolean hasPermission(@Nonnull CommandSender sender) {
-        return !Main.get().getConfig().disableCommand && super.hasPermission(sender);
+        return !BetterItemViewerPlugin.get().config().disableCommand && super.hasPermission(sender);
     }
 }

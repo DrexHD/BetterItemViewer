@@ -20,9 +20,9 @@ import com.hypixel.hytale.server.core.asset.util.ColorParseUtil;
 import com.hypixel.hytale.server.core.entity.UUIDComponent;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.entity.entities.player.pages.InteractiveCustomUIPage;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.ItemStack;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
+import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
@@ -41,8 +41,9 @@ import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.ints.Int2ObjectMap;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import me.drex.betteritemviewer.Main;
+import me.drex.betteritemviewer.BetterItemViewerPlugin;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
+import me.drex.betteritemviewer.component.NearbyContainersComponent;
 import me.drex.betteritemviewer.config.BetterItemViewerConfig;
 import me.drex.betteritemviewer.item.ItemDetails;
 import me.drex.betteritemviewer.item.ItemManager;
@@ -119,6 +120,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowSalvager #CheckBox", EventData.of(KEY_SHOW_SALVAGER_RECIPES, "#ShowSalvager #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowHiddenItems #CheckBox", EventData.of(KEY_SHOW_HIDDEN_ITEMS, "#ShowHiddenItems #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#ShowCreatorInfo #CheckBox", EventData.of(KEY_SHOW_CREATOR_INFO, "#ShowCreatorInfo #CheckBox.Value"), false);
+        eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#IncludeContainerItems #CheckBox", EventData.of(KEY_INCLUDE_CONTAINERS, "#IncludeContainerItems #CheckBox.Value"), false);
         eventBuilder.addEventBinding(CustomUIEventBindingType.ValueChanged, "#AltKeybind #CheckBox", EventData.of(KEY_ALT_KEYBIND, "#AltKeybind #CheckBox.Value"), false);
         this.build(ref, store, commandBuilder, eventBuilder);
     }
@@ -257,6 +259,10 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             settings.showCreatorInfo = data.showCreatorInfo;
         }
 
+        if (data.includeContainers != null) {
+            settings.includeContainers = data.includeContainers;
+        }
+
         this.build(ref, store, commandBuilder, eventBuilder);
         this.sendUpdate(commandBuilder, eventBuilder, false);
     }
@@ -272,14 +278,16 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         commandBuilder.set("#ShowSalvager #CheckBox.Value", settings.showSalvagerRecipes);
         commandBuilder.set("#ShowHiddenItems #CheckBox.Value", settings.showHiddenItems);
         commandBuilder.set("#ShowCreatorInfo #CheckBox.Value", settings.showCreatorInfo);
+        commandBuilder.set("#IncludeContainerItems #CheckBox.Value", settings.includeContainers);
         commandBuilder.set("#AltKeybind #CheckBox.Value", settings.altKeybind);
         commandBuilder.set("#CategoryFilter.Style.EntriesInViewport", 24);
 
-        BetterItemViewerConfig config = Main.get().getConfig();
+        BetterItemViewerConfig config = BetterItemViewerPlugin.get().config();
         commandBuilder.set("#ModFilter.Visible", !config.disableModFilter);
         commandBuilder.set("#ModFilterLabel.Visible", !config.disableModFilter);
         commandBuilder.set("#ShowHiddenItems.Visible", !config.disableHiddenItemsSetting);
         commandBuilder.set("#ShowCreatorInfo.Visible", !config.disableCreatorInfoSetting);
+        commandBuilder.set("#IncludeContainerItems.Visible", !config.disableIncludeContainersSetting);
         commandBuilder.set("#AltKeybind.Visible", !config.disableKeybind);
     }
 
@@ -308,12 +316,12 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
     private void build(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         if (!ref.isValid()) return;
         BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
+        NearbyContainersComponent nearbyContainers = store.ensureAndGetComponent(ref, NearbyContainersComponent.getComponentType());
         Player player = store.getComponent(ref, Player.getComponentType());
         if (player == null) return;
 
-
         this.buildList(settings, commandBuilder, eventBuilder);
-        this.buildStats(player, settings, commandBuilder, eventBuilder);
+        this.buildStats(player, settings, nearbyContainers, commandBuilder, eventBuilder);
     }
 
     private void buildList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
@@ -334,7 +342,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             int qualityIndex = item.getQualityIndex();
             ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
 
-            if (quality != null && (quality.isHiddenFromSearch() || Main.get().getConfig().hiddenQualities.contains(quality.getId())) && !settings.showHiddenItems) {
+            if (quality != null && (quality.isHiddenFromSearch() || BetterItemViewerPlugin.get().config().hiddenQualities.contains(quality.getId())) && !settings.showHiddenItems) {
                 return true;
             }
 
@@ -509,7 +517,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         commandBuilder.setObject("#ItemInfoSection.Anchor", itemInfoSectionAnchor);
     }
 
-    private void buildStats(Player player, BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+    private void buildStats(Player player, BetterItemViewerComponent settings, NearbyContainersComponent nearbyContainers, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
         commandBuilder.clear("#ItemStats");
         if (settings.selectedItem == null) return;
         Item selectedItem = Item.getAssetMap().getAsset(settings.selectedItem);
@@ -523,13 +531,17 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         if (settings.showCreatorInfo) {
             addCreatorInfo(selectedItem, commandBuilder, index);
         }
+        ItemContainer itemContainer = player.getInventory().getCombinedEverything();
+        if (settings.includeContainers) {
+            itemContainer = new CombinedItemContainer(itemContainer, nearbyContainers.itemContainer);
+        }
         addDescription(selectedItem, commandBuilder, index);
         addGeneral(selectedItem, commandBuilder, index);
         addArmorInfo(selectedItem, commandBuilder, index);
         addWeaponInfo(selectedItem, commandBuilder, index);
         addToolInfo(selectedItem, commandBuilder, index);
         addNpcLoot(selectedItem, commandBuilder, index);
-        addRecipes(player, settings, selectedItem, commandBuilder, eventBuilder);
+        addRecipes(itemContainer, settings, selectedItem, commandBuilder, eventBuilder);
 
         PermissionsModule perms = PermissionsModule.get();
         Set<String> groups = perms.getGroupsForUser(player.getUuid());
@@ -754,14 +766,14 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         index.getAndIncrement();
     }
 
-    private void addRecipes(Player player, BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
+    private void addRecipes(ItemContainer itemContainer, BetterItemViewerComponent settings, Item item, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder) {
         ItemDetails itemDetails = ItemManager.get().getOrCreateDetails(item.getId());
-        addRecipes(player, settings, commandBuilder, eventBuilder, "Recipes", "#Recipes", itemDetails.craftingRecipes, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
-        addRecipes(player, settings, commandBuilder, eventBuilder, "Usages", "#UsedIn", itemDetails.usageRecipes, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
+        addRecipes(itemContainer, settings, commandBuilder, eventBuilder, "Recipes", "#Recipes", itemDetails.craftingRecipes, settings.selectedRecipeInPage, currentPage -> settings.selectedRecipeInPage = currentPage, KEY_RECIPE_IN_PAGE);
+        addRecipes(itemContainer, settings, commandBuilder, eventBuilder, "Usages", "#UsedIn", itemDetails.usageRecipes, settings.selectedRecipeOutPage, currentPage -> settings.selectedRecipeOutPage = currentPage, KEY_RECIPE_OUT_PAGE);
     }
 
     private void addRecipes(
-        Player player, BetterItemViewerComponent settings, UICommandBuilder commandBuilder,
+        ItemContainer itemContainer, BetterItemViewerComponent settings, UICommandBuilder commandBuilder,
         UIEventBuilder eventBuilder, String title, String tag, Map<String, CraftingRecipe> craftingRecipesById,
         int currentPage, Consumer<Integer> pageChange, String eventKey
     ) {
@@ -779,6 +791,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         }).toList();
 
         if (craftingRecipes.isEmpty()) return;
+
 
         AtomicInteger i = new AtomicInteger();
         commandBuilder.appendInline("#ItemStats", "Group " + tag + " {LayoutMode: Top; Padding: (Top: 12);}");
@@ -844,7 +857,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         i.getAndIncrement();
 
         for (MaterialQuantity input : recipe.getInput()) {
-            addMaterialQuantity(player, input, commandBuilder, eventBuilder, tag, true, i);
+            addMaterialQuantity(itemContainer, input, commandBuilder, eventBuilder, tag, true, i);
         }
 
         commandBuilder.appendInline(tag, "Label {Style: (FontSize: 18, TextColor: #aaaaaa);}");
@@ -852,12 +865,11 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         i.getAndIncrement();
 
         for (MaterialQuantity output : recipe.getOutputs()) {
-            addMaterialQuantity(player, output, commandBuilder, eventBuilder, tag, false, i);
+            addMaterialQuantity(itemContainer, output, commandBuilder, eventBuilder, tag, false, i);
         }
     }
 
-    private void addMaterialQuantity(Player player, MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, boolean countInventory, AtomicInteger i) {
-        Inventory inventory = player.getInventory();
+    private void addMaterialQuantity(ItemContainer itemContainer, MaterialQuantity materialQuantity, UICommandBuilder commandBuilder, UIEventBuilder eventBuilder, String tag, boolean countInventory, AtomicInteger i) {
         String itemId = materialQuantity.getItemId();
         String resourceTypeId = materialQuantity.getResourceTypeId();
 
@@ -865,7 +877,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             Item inputItem = Item.getAssetMap().getAsset(itemId);
             if (inputItem == null) return;
 
-            int count = inventory.getCombinedEverything().countItemStacks(itemStack -> itemStack.getItemId().equals(itemId));
+            int count = itemContainer.countItemStacks(itemStack -> itemStack.getItemId().equals(itemId));
 
             commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RecipeEntry.ui");
 
@@ -888,7 +900,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             ResourceType resourceType = ResourceType.getAssetMap().getAsset(resourceTypeId);
             if (resourceType == null) return;
 
-            int count = inventory.getCombinedEverything().countItemStacks(itemStack -> {
+            int count = itemContainer.countItemStacks(itemStack -> {
                 ItemResourceType[] resourceTypes = itemStack.getItem().getResourceTypes();
                 if (resourceTypes != null) {
                     for (ItemResourceType type : resourceTypes) {
@@ -1035,6 +1047,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         static final String KEY_SHOW_SALVAGER_RECIPES = "@ShowSalvagerRecipes";
         static final String KEY_SHOW_HIDDEN_ITEMS = "@ShowHiddenItems";
         static final String KEY_SHOW_CREATOR_INFO = "@ShowCreatorInfo";
+        static final String KEY_INCLUDE_CONTAINERS = "@IncludeContainers";
         static final String KEY_ITEM = "SelectItem";
         static final String KEY_SET_SEARCH = "SetSearch";
         static final String KEY_GIVE_ITEM = "GiveItem";
@@ -1056,6 +1069,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             .addField(new KeyedCodec<>(KEY_SHOW_SALVAGER_RECIPES, Codec.BOOLEAN), (guiData, s) -> guiData.showSalvagerRecipes = s, guiData -> guiData.showSalvagerRecipes)
             .addField(new KeyedCodec<>(KEY_SHOW_HIDDEN_ITEMS, Codec.BOOLEAN), (guiData, s) -> guiData.showHiddenItems = s, guiData -> guiData.showHiddenItems)
             .addField(new KeyedCodec<>(KEY_SHOW_CREATOR_INFO, Codec.BOOLEAN), (guiData, s) -> guiData.showCreatorInfo = s, guiData -> guiData.showCreatorInfo)
+            .addField(new KeyedCodec<>(KEY_INCLUDE_CONTAINERS, Codec.BOOLEAN), (guiData, s) -> guiData.includeContainers = s, guiData -> guiData.includeContainers)
             .addField(new KeyedCodec<>(KEY_ITEM, Codec.STRING), (guiData, s) -> guiData.selectItem = s, guiData -> guiData.selectItem)
             .addField(new KeyedCodec<>(KEY_SET_SEARCH, Codec.STRING), (guiData, s) -> guiData.setSearch = s, guiData -> guiData.setSearch)
             .addField(new KeyedCodec<>(KEY_GIVE_ITEM, Codec.STRING), (guiData, s) -> guiData.giveItem = s, guiData -> guiData.giveItem)
@@ -1082,6 +1096,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         private Boolean showSalvagerRecipes;
         private Boolean showHiddenItems;
         private Boolean showCreatorInfo;
+        private Boolean includeContainers;
         private String listPage;
         private String pinRecipe;
         private String recipeInPage;

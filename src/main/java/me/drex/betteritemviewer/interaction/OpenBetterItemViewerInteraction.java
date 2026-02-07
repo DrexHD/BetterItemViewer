@@ -13,7 +13,7 @@ import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Sim
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import me.drex.betteritemviewer.Main;
+import me.drex.betteritemviewer.BetterItemViewerPlugin;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.ui.page.ItemViewerPage;
 
@@ -42,7 +42,7 @@ public class OpenBetterItemViewerInteraction extends SimpleInstantInteraction {
                 try {
                     player.getPageManager().openCustomPage(ref, store, new ItemViewerPage(playerRef, CustomPageLifetime.CanDismiss));
                 } catch (Exception e) {
-                    Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                    BetterItemViewerPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                     settings.clearFilters();
                 }
             });

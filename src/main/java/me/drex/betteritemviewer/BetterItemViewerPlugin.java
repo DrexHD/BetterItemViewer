@@ -17,7 +17,9 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import com.hypixel.hytale.server.core.util.Config;
 import me.drex.betteritemviewer.command.BetterItemViewerCommand;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
+import me.drex.betteritemviewer.component.NearbyContainersComponent;
 import me.drex.betteritemviewer.config.BetterItemViewerConfig;
+import me.drex.betteritemviewer.system.CollectNearbyContainersSystem;
 import me.drex.betteritemviewer.ui.hud.HudUtils;
 import me.drex.betteritemviewer.interaction.OpenBetterItemViewerInteraction;
 import me.drex.betteritemviewer.item.ItemManager;
@@ -25,37 +27,46 @@ import me.drex.betteritemviewer.system.CheckKeybindSystem;
 
 import javax.annotation.Nonnull;
 
-public class Main extends JavaPlugin {
+public class BetterItemViewerPlugin extends JavaPlugin {
 
-    private static Main instance;
+    private static BetterItemViewerPlugin instance;
 
     private final Config<BetterItemViewerConfig> config = this.withConfig("BetterItemViewer", BetterItemViewerConfig.CODEC);
-    private ComponentType<EntityStore, BetterItemViewerComponent> componentType;
+    private ComponentType<EntityStore, BetterItemViewerComponent> mainComponentType;
+    private ComponentType<EntityStore, NearbyContainersComponent> nearbyContainersComponentType;
 
-    public static Main get() {
+    public static BetterItemViewerPlugin get() {
         return instance;
     }
 
-    public Main(@Nonnull JavaPluginInit init) {
+    public BetterItemViewerPlugin(@Nonnull JavaPluginInit init) {
         super(init);
     }
 
-    public ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
-        return this.componentType;
+    public ComponentType<EntityStore, BetterItemViewerComponent> getMainComponentType() {
+        return this.mainComponentType;
+    }
+
+    public ComponentType<EntityStore, NearbyContainersComponent> getNearbyContainersComponentType() {
+        return this.nearbyContainersComponentType;
     }
 
     @Override
     protected void setup() {
         instance = this;
         config.save();
-        this.componentType = this.getEntityStoreRegistry().registerComponent(BetterItemViewerComponent.class, "Drex_BetterItemViewer", BetterItemViewerComponent.CODEC);
+        this.mainComponentType = this.getEntityStoreRegistry().registerComponent(BetterItemViewerComponent.class, "Drex_BetterItemViewer", BetterItemViewerComponent.CODEC);
+        this.nearbyContainersComponentType = this.getEntityStoreRegistry().registerComponent(NearbyContainersComponent.class, NearbyContainersComponent::new);
         this.getCommandRegistry().registerCommand(new BetterItemViewerCommand());
-        this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, Main::onItemLoad);
-        this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, Main::onRecipeLoad);
-        this.getEventRegistry().register(AllWorldsLoadedEvent.class, Main::onReady);
-        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, Main::onPlayerReady);
-        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, Main::onInventoryChange);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, BetterItemViewerPlugin::onItemLoad);
+        this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, BetterItemViewerPlugin::onRecipeLoad);
+        this.getEventRegistry().register(AllWorldsLoadedEvent.class, BetterItemViewerPlugin::onReady);
+        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, BetterItemViewerPlugin::onPlayerReady);
+        this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, BetterItemViewerPlugin::onInventoryChange);
         this.getEntityStoreRegistry().registerSystem(new CheckKeybindSystem());
+        if (!config().disableIncludeContainersSetting) {
+            this.getEntityStoreRegistry().registerSystem(new CollectNearbyContainersSystem());
+        }
         Interaction.CODEC.register("OpenBetterItemViewer", OpenBetterItemViewerInteraction.class, OpenBetterItemViewerInteraction.CODEC);
     }
 
@@ -71,7 +82,7 @@ public class Main extends JavaPlugin {
         HudUtils.updateHud(ref);
     }
 
-    public BetterItemViewerConfig getConfig() {
+    public BetterItemViewerConfig config() {
         return config.get();
     }
 

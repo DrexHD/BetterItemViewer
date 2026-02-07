@@ -22,6 +22,8 @@ public class BetterItemViewerConfig {
         .add()
         .append(new KeyedCodec<>("DisableHiddenItemsSetting", Codec.BOOLEAN), (o, i) -> o.disableHiddenItemsSetting = i, o -> o.disableHiddenItemsSetting)
         .add()
+        .append(new KeyedCodec<>("DisableIncludeContainersSetting", Codec.BOOLEAN), (o, i) -> o.disableIncludeContainersSetting = i, o -> o.disableIncludeContainersSetting)
+        .add()
         .append(new KeyedCodec<>("HiddenQualities", new SetCodec<>(Codec.STRING, HashSet::new, true)), (o, i) -> o.hiddenQualities = i, o -> o.hiddenQualities)
         .add()
         .build();
@@ -32,5 +34,6 @@ public class BetterItemViewerConfig {
     public boolean disableModFilter = false;
     public boolean disableCreatorInfoSetting = false;
     public boolean disableHiddenItemsSetting = false;
+    public boolean disableIncludeContainersSetting = false;
     public Set<String> hiddenQualities = Set.of("Developer", "Tool", "Technical");
 }

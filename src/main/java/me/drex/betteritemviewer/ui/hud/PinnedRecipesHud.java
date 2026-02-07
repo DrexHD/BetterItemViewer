@@ -7,8 +7,8 @@ import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.asset.type.item.config.ResourceType;
 import com.hypixel.hytale.server.core.entity.entities.player.hud.CustomUIHud;
-import com.hypixel.hytale.server.core.inventory.Inventory;
 import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
+import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.ui.builder.UICommandBuilder;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
@@ -20,12 +20,12 @@ import java.util.concurrent.atomic.AtomicInteger;
 public class PinnedRecipesHud extends CustomUIHud {
 
     private final Set<String> pinnedRecipes;
-    private final Inventory inventory;
+    private final ItemContainer itemContainer;
 
-    public PinnedRecipesHud(@Nonnull PlayerRef playerRef, Set<String> pinnedRecipes, Inventory inventory) {
+    public PinnedRecipesHud(@Nonnull PlayerRef playerRef, Set<String> pinnedRecipes, ItemContainer itemContainer) {
         super(playerRef);
         this.pinnedRecipes = pinnedRecipes;
-        this.inventory = inventory;
+        this.itemContainer = itemContainer;
     }
 
     @Override
@@ -76,7 +76,7 @@ public class PinnedRecipesHud extends CustomUIHud {
             Item inputItem = Item.getAssetMap().getAsset(itemId);
             if (inputItem == null) return;
 
-            int count = inventory.getCombinedEverything().countItemStacks(itemStack -> itemStack.getItemId().equals(itemId));
+            int count = itemContainer.countItemStacks(itemStack -> itemStack.getItemId().equals(itemId));
 
             commandBuilder.append(tag, "Huds/Drex_BetterItemViewer_RecipeEntry.ui");
             commandBuilder.set(tag + "[" + i + "] #ItemIcon.ItemId", itemId);
@@ -95,7 +95,7 @@ public class PinnedRecipesHud extends CustomUIHud {
             ResourceType resourceType = ResourceType.getAssetMap().getAsset(resourceTypeId);
             if (resourceType == null) return;
 
-            int count = inventory.getCombinedEverything().countItemStacks(itemStack -> {
+            int count = itemContainer.countItemStacks(itemStack -> {
                 ItemResourceType[] resourceTypes = itemStack.getItem().getResourceTypes();
                 if (resourceTypes != null) {
                     for (ItemResourceType type : resourceTypes) {

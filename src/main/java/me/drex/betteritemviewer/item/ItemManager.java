@@ -7,7 +7,6 @@ import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.math.vector.Vector3d;
-import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.*;
 import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
@@ -27,7 +26,7 @@ import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
 import com.hypixel.hytale.server.npc.util.expression.Scope;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import it.unimi.dsi.fastutil.Pair;
-import me.drex.betteritemviewer.Main;
+import me.drex.betteritemviewer.BetterItemViewerPlugin;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
@@ -148,7 +147,7 @@ public class ItemManager {
                 }
             }
         } catch (Exception e) {
-            Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to parse item damage interactions for item " + id + ":");
+            BetterItemViewerPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to parse item damage interactions for item " + id + ":");
         }
 
         return damageInteractions;

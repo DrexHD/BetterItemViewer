@@ -14,7 +14,7 @@ import com.hypixel.hytale.server.core.entity.movement.MovementStatesComponent;
 import com.hypixel.hytale.server.core.universe.PlayerRef;
 import com.hypixel.hytale.server.core.universe.world.World;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
-import me.drex.betteritemviewer.Main;
+import me.drex.betteritemviewer.BetterItemViewerPlugin;
 import me.drex.betteritemviewer.component.BetterItemViewerComponent;
 import me.drex.betteritemviewer.ui.page.ItemViewerPage;
 
@@ -30,7 +30,7 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
         if (player == null) return;
         World world = player.getWorld();
         MovementStates movementStates = statesComponent.getMovementStates();
-        if (movementStates.walking && !Main.get().getConfig().disableKeybind) {
+        if (movementStates.walking && !BetterItemViewerPlugin.get().config().disableKeybind) {
             Ref<EntityStore> ref = player.getReference();
             PlayerRef playerRefComponent = archetypeChunk.getComponent(index, PlayerRef.getComponentType());
             if (ref == null || !ref.isValid()) return;
@@ -43,7 +43,7 @@ public class CheckKeybindSystem extends EntityTickingSystem<EntityStore> {
                         pageManager.openCustomPage(ref, store, new ItemViewerPage(playerRefComponent, CustomPageLifetime.CanDismiss));
                     }
                 } catch (Exception e) {
-                    Main.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
+                    BetterItemViewerPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                     component.clearFilters();
                 }
             });

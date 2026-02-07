@@ -96,10 +96,14 @@ $C.@PageOverlay {
 
         $C.@DropdownBox #FilterCraftable {
           Anchor: (Width: 280, Height: 30);
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+          TooltipText: "This will only include items that have recipes to craft them.";
         }
 
         $C.@DropdownBox #FilterPinned {
           Anchor: (Width: 280, Height: 30, Top: 2);
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+          TooltipText: "This will only include items that have pinned recipes.";
         }
 
         TextButton #ResetFiltersButton {
@@ -123,21 +127,36 @@ $C.@PageOverlay {
 
         $C.@CheckBoxWithLabel #ShowSalvager {
           @Text = "Show Salvager Recipes";
+          TooltipText: "If this is disabled salvager recipes won't be shown in the item recipe section.";
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
           Padding: (Top: 2);
         }
 
         $C.@CheckBoxWithLabel #ShowHiddenItems {
           @Text = "Show Hidden Items";
+          TooltipText: "If this is enabled items that may not be considered ready or creator / developer only items will be included in the item list.";
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
           Padding: (Top: 2);
         }
 
         $C.@CheckBoxWithLabel #ShowCreatorInfo {
           @Text = "Show Creator Info";
+          TooltipText: "If this is enabled the item stats section on the right will include a lot more details about items that may be useful for creators / developers.";
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+          Padding: (Top: 2);
+        }
+
+        $C.@CheckBoxWithLabel #IncludeContainerItems {
+          @Text = "Include Nearby Containers";
+          TooltipText: "If this is enabled recipe item counts will count items in your inventory AND items from nearby containers. This works similiar to the nearby containers from workbenches.";
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
           Padding: (Top: 2);
         }
 
         $C.@CheckBoxWithLabel #AltKeybind {
-          @Text = "Enable 'Alt' Keybind";
+          @Text = "Enable 'Left Alt' Keybind";
+          TooltipText: "If this is enabled you can use your (slow) walk key bound to 'Left Alt' by default to open the UI from anywhere, anytime.";
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
           Padding: (Top: 2, Bottom: 4);
         }
 
