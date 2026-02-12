@@ -39,11 +39,11 @@ processResources {
 
 def serverRunDir = file("$projectDir/run")
 
-idea.project.settings.runConfigurations {
-    'HytaleServer'(org.jetbrains.gradle.ext.Application) {
-        mainClass = 'com.hypixel.hytale.Main'
-        moduleName = project.idea.module.name + '.main'
-        programParameters = "--assets \"${project.hytaleHome}/release/package/game/latest/Assets.zip\" --auth-mode AUTHENTICATED --mods ${file("src/main/").absolutePath}"
-        workingDirectory = serverRunDir.absolutePath
-    }
-}
+//idea.project.settings.runConfigurations {
+//    'HytaleServer'(org.jetbrains.gradle.ext.Application) {
+//        mainClass = 'com.hypixel.hytale.Main'
+//        moduleName = project.idea.module.name + '.main'
+//        programParameters = "--assets \"${project.hytaleHome}/release/package/game/latest/Assets.zip\" --auth-mode AUTHENTICATED --mods ${file("src/main/").absolutePath}"
+//        workingDirectory = serverRunDir.absolutePath
+//    }
+//}

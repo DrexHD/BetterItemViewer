@@ -4,6 +4,7 @@ import com.hypixel.hytale.codec.Codec;
 import com.hypixel.hytale.codec.KeyedCodec;
 import com.hypixel.hytale.codec.builder.BuilderCodec;
 import com.hypixel.hytale.codec.codecs.EnumCodec;
+import com.hypixel.hytale.codec.codecs.array.ArrayCodec;
 import com.hypixel.hytale.codec.codecs.set.SetCodec;
 import com.hypixel.hytale.component.Component;
 import com.hypixel.hytale.component.ComponentType;
@@ -11,8 +12,7 @@ import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import me.drex.betteritemviewer.BetterItemViewerPlugin;
 
 import javax.annotation.Nullable;
-import java.util.LinkedHashSet;
-import java.util.Set;
+import java.util.*;
 
 public class BetterItemViewerComponent implements Component<EntityStore> {
 
@@ -55,6 +55,8 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         .add()
         .append(new KeyedCodec<>("PinnedRecipes", new SetCodec<>(Codec.STRING, LinkedHashSet::new, false)), (o, v) -> o.pinnedRecipes = v, o -> o.pinnedRecipes)
         .add()
+        .append(new KeyedCodec<>("RecentItems", new ArrayCodec<>(Codec.STRING, String[]::new)), (o, v) -> o.recentItems = new LinkedList<>(Arrays.asList(v)), o -> o.recentItems.toArray(String[]::new))
+        .add()
         .build();
 
     public String searchQuery = "";
@@ -75,6 +77,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
     public boolean includeContainers = false;
     public boolean altKeybind = BetterItemViewerPlugin.get().config().defaultAltKeybind;
     public Set<String> pinnedRecipes = new LinkedHashSet<>();
+    public List<String> recentItems = new LinkedList<>();
 
     public static ComponentType<EntityStore, BetterItemViewerComponent> getComponentType() {
         return BetterItemViewerPlugin.get().getMainComponentType();
@@ -100,7 +103,8 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         String searchQuery, String modFilter, String categoryFilter, Filter craftableFilter, Filter pinnedFilter,
         String sortMode, String selectedItem, int selectedPage, int selectedRecipeInPage, int selectedRecipeOutPage,
         int itemListRows, int itemListColumns, boolean showSalvagerRecipes, boolean showHiddenItems,
-        boolean showCreatorInfo, boolean includeContainers, boolean altKeybind, Set<String> pinnedRecipes
+        boolean showCreatorInfo, boolean includeContainers, boolean altKeybind, Set<String> pinnedRecipes,
+        List<String> recentItems
     ) {
         this.searchQuery = searchQuery;
         this.modFilter = modFilter;
@@ -120,6 +124,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         this.includeContainers = includeContainers;
         this.altKeybind = altKeybind;
         this.pinnedRecipes = new LinkedHashSet<>(pinnedRecipes);
+        this.recentItems = new LinkedList<>(recentItems);
     }
 
     @Nullable
@@ -128,7 +133,7 @@ public class BetterItemViewerComponent implements Component<EntityStore> {
         return new BetterItemViewerComponent(
             searchQuery, modFilter, categoryFilter, craftableFilter, pinnedFilter, sortMode, selectedItem, selectedPage,
             selectedRecipeInPage, selectedRecipeOutPage, itemListRows, itemListColumns, showSalvagerRecipes,
-            showHiddenItems, showCreatorInfo, includeContainers, altKeybind, pinnedRecipes
+            showHiddenItems, showCreatorInfo, includeContainers, altKeybind, pinnedRecipes, recentItems
         );
     }
 

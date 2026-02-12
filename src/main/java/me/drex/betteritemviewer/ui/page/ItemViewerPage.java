@@ -59,6 +59,7 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 import static me.drex.betteritemviewer.ui.page.ItemViewerPage.GuiData.*;
 
@@ -145,6 +146,12 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
 
         if (data.selectItem != null) {
             settings.selectedItem = data.selectItem;
+            if (!settings.recentItems.contains(settings.selectedItem)) {
+                settings.recentItems.addFirst(settings.selectedItem);
+                if (settings.recentItems.size() > 24) {
+                    settings.recentItems.removeLast();
+                }
+            }
         }
 
         if (data.setSearch != null) {
@@ -284,7 +291,6 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
 
         BetterItemViewerConfig config = BetterItemViewerPlugin.get().config();
         commandBuilder.set("#ModFilter.Visible", !config.disableModFilter);
-        commandBuilder.set("#ModFilterLabel.Visible", !config.disableModFilter);
         commandBuilder.set("#ShowHiddenItems.Visible", !config.disableHiddenItemsSetting);
         commandBuilder.set("#ShowCreatorInfo.Visible", !config.disableCreatorInfoSetting);
         commandBuilder.set("#IncludeContainerItems.Visible", !config.disableIncludeContainersSetting);
@@ -505,6 +511,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#ResetFiltersButton", EventData.of(KEY_ACTION, RESET_FILTERS_ACTION));
 
         this.updateItemList(settings, items, commandBuilder, eventBuilder);
+        this.updateRecentItemList(settings, commandBuilder, eventBuilder);
 
         Anchor itemSectionAnchor = new Anchor();
         itemSectionAnchor.setHeight(Value.of(settings.itemListRows * 100));
@@ -582,6 +589,38 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             eventBuilder.addEventBinding(CustomUIEventBindingType.RightClicking, "#ItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_GIVE_ITEM, item.getId()));
             ++cardsInCurrentRow;
             if (cardsInCurrentRow >= settings.itemListColumns) {
+                cardsInCurrentRow = 0;
+                ++rowIndex;
+            }
+        }
+    }
+
+    private void updateRecentItemList(BetterItemViewerComponent settings, @Nonnull UICommandBuilder commandBuilder, @Nonnull UIEventBuilder eventBuilder) {
+        commandBuilder.clear("#RecentItemSection");
+        List<Item> items = settings.recentItems.stream().map(s -> Item.getAssetMap().getAsset(s)).filter(Objects::nonNull).toList();
+
+        int rowIndex = 0;
+        int cardsInCurrentRow = 0;
+
+        for (Item item : items) {
+            if (cardsInCurrentRow == 0) {
+                commandBuilder.appendInline("#RecentItemSection", "Group { LayoutMode: Left; Anchor: (Bottom: 0); }");
+            }
+
+            commandBuilder.append("#RecentItemSection[" + rowIndex + "]", "Pages/Drex_BetterItemViewer_RecentItem.ui");
+
+            int qualityIndex = item.getQualityIndex();
+            ItemQuality quality = ItemQuality.getAssetMap().getAsset(qualityIndex);
+            if (quality != null) {
+                String slotTexture = quality.getSlotTexture();
+                commandBuilder.set("#RecentItemSection[" + rowIndex + "][" + cardsInCurrentRow + "].AssetPath", slotTexture);
+            }
+
+            commandBuilder.set("#RecentItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemIcon.ItemId", item.getId());
+            eventBuilder.addEventBinding(CustomUIEventBindingType.Activating, "#RecentItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_ITEM, item.getId()));
+            eventBuilder.addEventBinding(CustomUIEventBindingType.RightClicking, "#RecentItemSection[" + rowIndex + "][" + cardsInCurrentRow + "] #ItemButton", EventData.of(KEY_GIVE_ITEM, item.getId()));
+            ++cardsInCurrentRow;
+            if (cardsInCurrentRow >= 8) {
                 cardsInCurrentRow = 0;
                 ++rowIndex;
             }

@@ -47,20 +47,8 @@ $C.@PageOverlay {
           }
         }
 
-        Label #ModFilterLabel {
-          Text: "Mods";
-          Style: (
-            FontSize: 18,
-            RenderBold: true
-          );
-        }
-
-        $C.@DropdownBox #ModFilter {
-          Anchor: (Width: 280, Height: 30);
-        }
-
         Label {
-          Text: "Categories";
+          Text: "Filters";
           Padding: (Top: 10);
           Style: (
             FontSize: 18,
@@ -70,6 +58,22 @@ $C.@PageOverlay {
 
         $C.@DropdownBox #CategoryFilter {
           Anchor: (Width: 280, Height: 30);
+        }
+
+        $C.@DropdownBox #ModFilter {
+          Anchor: (Width: 280, Height: 30, Top: 4);
+        }
+
+        $C.@DropdownBox #FilterCraftable {
+          Anchor: (Width: 280, Height: 30, Top: 4);
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+          TooltipText: "This will only include items that have recipes to craft them.";
+        }
+
+        $C.@DropdownBox #FilterPinned {
+          Anchor: (Width: 280, Height: 30, Top: 4);
+          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
+          TooltipText: "This will only include items that have pinned recipes.";
         }
 
         Label {
@@ -85,26 +89,6 @@ $C.@PageOverlay {
           Anchor: (Width: 280, Height: 30);
         }
 
-        Label {
-          Text: "Filters";
-          Padding: (Top: 10);
-          Style: (
-            FontSize: 18,
-            RenderBold: true
-          );
-        }
-
-        $C.@DropdownBox #FilterCraftable {
-          Anchor: (Width: 280, Height: 30);
-          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
-          TooltipText: "This will only include items that have recipes to craft them.";
-        }
-
-        $C.@DropdownBox #FilterPinned {
-          Anchor: (Width: 280, Height: 30, Top: 2);
-          TextTooltipStyle: $C.@DefaultTextTooltipStyle;
-          TooltipText: "This will only include items that have pinned recipes.";
-        }
 
         TextButton #ResetFiltersButton {
           TextTooltipStyle: $C.@DefaultTextTooltipStyle;
@@ -117,8 +101,22 @@ $C.@PageOverlay {
         }
 
         Label {
+          Text: "Recent Items";
+          Padding: (Top: 12);
+          Style: (
+            FontSize: 18,
+            RenderBold: true
+          );
+        }
+
+        Group #RecentItemSection {
+          Anchor: (Top: 4);
+          LayoutMode: Top;
+        }
+
+        Label {
           Text: "Settings";
-          Padding: (Top: 30);
+          Padding: (Top: 12);
           Style: (
             FontSize: 18,
             RenderBold: true
