@@ -8,7 +8,6 @@ import com.hypixel.hytale.common.plugin.PluginManifest;
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
 import com.hypixel.hytale.protocol.BenchRequirement;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.ItemResourceType;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.protocol.packets.interface_.CustomUIEventBindingType;
@@ -29,7 +28,6 @@ import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.server.combat.DamageClass;
-import com.hypixel.hytale.server.core.permissions.PermissionsModule;
 import com.hypixel.hytale.server.core.ui.Anchor;
 import com.hypixel.hytale.server.core.ui.DropdownEntryInfo;
 import com.hypixel.hytale.server.core.ui.LocalizableString;
@@ -59,7 +57,6 @@ import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.Consumer;
 import java.util.function.Function;
 import java.util.stream.Collectors;
-import java.util.stream.Stream;
 
 import static me.drex.betteritemviewer.ui.page.ItemViewerPage.GuiData.*;
 
@@ -300,15 +297,13 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
     private void giveItem(@Nonnull Ref<EntityStore> ref, @Nonnull Store<EntityStore> store, String itemId, boolean maxStack) {
         if (!ref.isValid()) return;
         Player player = store.getComponent(ref, Player.getComponentType());
-        PermissionsModule perms = PermissionsModule.get();
         if (player == null) return;
         UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
         if (uuidComponent == null) return;
-        Set<String> groups = perms.getGroupsForUser(uuidComponent.getUuid());
-        GameMode gameMode = player.getGameMode();
-        if (gameMode != GameMode.Creative && !groups.contains("OP")) {
+        if (!player.hasPermission("drex.betteritemviewer.give")) {
             return;
         }
+
         Item item = Item.getAssetMap().getAsset(itemId);
         if (item == null) return;
         ItemStack stack = new ItemStack(itemId);
@@ -550,10 +545,8 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         addNpcLoot(selectedItem, commandBuilder, index);
         addRecipes(itemContainer, settings, selectedItem, commandBuilder, eventBuilder);
 
-        PermissionsModule perms = PermissionsModule.get();
-        Set<String> groups = perms.getGroupsForUser(player.getUuid());
-        GameMode gameMode = player.getGameMode();
-        boolean canCheat = gameMode == GameMode.Creative || groups.contains("OP");
+        boolean canCheat = player.hasPermission("drex.betteritemviewer.give");
+
         commandBuilder.set("#GiveItemButton.Visible", canCheat);
         commandBuilder.set("#GiveItemStackButton.Visible", canCheat);
 
