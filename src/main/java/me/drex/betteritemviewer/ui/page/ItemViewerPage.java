@@ -442,7 +442,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         ObjectArrayList<DropdownEntryInfo> mods = new ObjectArrayList<>();
         mods.add(new DropdownEntryInfo(LocalizableString.fromString("All Mods"), ""));
 
-        for (AssetPack assetPack : AssetModule.get().getAssetPacks()) {
+        for (AssetPack assetPack : AssetModule.get().getAssetPacks().stream().sorted(Comparator.comparing(assetPack -> assetPack.getManifest().getName())).toList()) {
             Set<String> keysForPack = Item.getAssetMap().getKeysForPack(assetPack.getName());
             if (keysForPack == null || keysForPack.isEmpty()) continue;
             mods.add(new DropdownEntryInfo(LocalizableString.fromString(assetPack.getManifest().getName()), assetPack.getName()));
