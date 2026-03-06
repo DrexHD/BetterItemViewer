@@ -3,11 +3,9 @@ package me.drex.betteritemviewer;
 import com.hypixel.hytale.assetstore.event.LoadedAssetsEvent;
 import com.hypixel.hytale.assetstore.map.DefaultAssetMap;
 import com.hypixel.hytale.component.ComponentType;
-import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.server.core.asset.type.item.config.CraftingRecipe;
 import com.hypixel.hytale.server.core.asset.type.item.config.Item;
 import com.hypixel.hytale.server.core.event.events.entity.LivingEntityInventoryChangeEvent;
-import com.hypixel.hytale.server.core.event.events.player.PlayerReadyEvent;
 import com.hypixel.hytale.server.core.modules.interaction.interaction.config.Interaction;
 import com.hypixel.hytale.server.core.plugin.JavaPlugin;
 import com.hypixel.hytale.server.core.plugin.JavaPluginInit;
@@ -61,7 +59,6 @@ public class BetterItemViewerPlugin extends JavaPlugin {
         this.getEventRegistry().register(LoadedAssetsEvent.class, Item.class, BetterItemViewerPlugin::onItemLoad);
         this.getEventRegistry().register(LoadedAssetsEvent.class, CraftingRecipe.class, BetterItemViewerPlugin::onRecipeLoad);
         this.getEventRegistry().register(AllWorldsLoadedEvent.class, BetterItemViewerPlugin::onReady);
-        this.getEventRegistry().registerGlobal(PlayerReadyEvent.class, BetterItemViewerPlugin::onPlayerReady);
         this.getEventRegistry().registerGlobal(LivingEntityInventoryChangeEvent.class, BetterItemViewerPlugin::onInventoryChange);
         this.getEntityStoreRegistry().registerSystem(new CheckKeybindSystem());
         if (!config().disableIncludeContainersSetting) {
@@ -75,11 +72,6 @@ public class BetterItemViewerPlugin extends JavaPlugin {
         world.execute(() -> {
             HudUtils.updateHud(event.getEntity().getReference());
         });
-    }
-
-    private static void onPlayerReady(PlayerReadyEvent event) {
-        Ref<EntityStore> ref = event.getPlayerRef();
-        HudUtils.updateHud(ref);
     }
 
     public BetterItemViewerConfig config() {
