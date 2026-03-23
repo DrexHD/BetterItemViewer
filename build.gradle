@@ -24,7 +24,7 @@ repositories {
 dependencies {
     testImplementation platform('org.junit:junit-bom:5.10.0')
     testImplementation 'org.junit.jupiter:junit-jupiter'
-    implementation(files("${project.hytaleHome}/release/package/game/latest/Server/HytaleServer.jar"))
+    implementation(files("${project.hytaleHome}/pre-release/package/game/latest/Server/HytaleServer.jar"))
 
     implementation "com.buuz135:MultipleHUD:1.0.4"
 }
@@ -39,11 +39,11 @@ processResources {
 
 def serverRunDir = file("$projectDir/run")
 
-//idea.project.settings.runConfigurations {
-//    'HytaleServer'(org.jetbrains.gradle.ext.Application) {
-//        mainClass = 'com.hypixel.hytale.Main'
-//        moduleName = project.idea.module.name + '.main'
-//        programParameters = "--assets \"${project.hytaleHome}/release/package/game/latest/Assets.zip\" --auth-mode AUTHENTICATED --mods ${file("src/main/").absolutePath}"
-//        workingDirectory = serverRunDir.absolutePath
-//    }
-//}
+idea.project.settings.runConfigurations {
+    'HytaleServer'(org.jetbrains.gradle.ext.Application) {
+        mainClass = 'com.hypixel.hytale.Main'
+        moduleName = project.idea.module.name + '.main'
+        programParameters = "--assets \"${project.hytaleHome}/pre-release/package/game/latest/Assets.zip\" --auth-mode AUTHENTICATED --mods ${file("src/main/").absolutePath}"
+        workingDirectory = serverRunDir.absolutePath
+    }
+}

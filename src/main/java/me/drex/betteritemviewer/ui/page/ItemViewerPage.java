@@ -533,7 +533,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         if (settings.showCreatorInfo) {
             addCreatorInfo(selectedItem, commandBuilder, index);
         }
-        ItemContainer itemContainer = player.getInventory().getCombinedEverything();
+        ItemContainer itemContainer = player.getInventory().getCombinedHotbarFirst();
         if (settings.includeContainers) {
             itemContainer = new CombinedItemContainer(itemContainer, nearbyContainers.itemContainer);
         }

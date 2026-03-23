@@ -24,7 +24,7 @@ public class HudUtils {
         if (player == null || playerRef == null) return;
         BetterItemViewerComponent viewerComponent = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
         NearbyContainersComponent nearbyContainers = store.ensureAndGetComponent(ref, NearbyContainersComponent.getComponentType());
-        ItemContainer itemContainer = player.getInventory().getCombinedEverything();
+        ItemContainer itemContainer = player.getInventory().getCombinedHotbarFirst();
         if (viewerComponent.includeContainers) {
             itemContainer = new CombinedItemContainer(itemContainer, nearbyContainers.itemContainer);
         }

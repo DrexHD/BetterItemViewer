@@ -10,15 +10,13 @@ import com.hypixel.hytale.component.system.tick.DelayedEntitySystem;
 import com.hypixel.hytale.server.core.entity.entities.Player;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
+import com.hypixel.hytale.server.core.modules.block.BlockModule;
+import com.hypixel.hytale.server.core.modules.block.components.ItemContainerBlock;
 import com.hypixel.hytale.server.core.modules.entity.component.TransformComponent;
 import com.hypixel.hytale.server.core.universe.world.World;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockState;
-import com.hypixel.hytale.server.core.universe.world.meta.BlockStateModule;
-import com.hypixel.hytale.server.core.universe.world.meta.state.ItemContainerState;
 import com.hypixel.hytale.server.core.universe.world.storage.ChunkStore;
 import com.hypixel.hytale.server.core.universe.world.storage.EntityStore;
 import it.unimi.dsi.fastutil.objects.ObjectArrayList;
-import it.unimi.dsi.fastutil.objects.ObjectList;
 import me.drex.betteritemviewer.component.NearbyContainersComponent;
 import me.drex.betteritemviewer.ui.hud.HudUtils;
 
@@ -42,9 +40,8 @@ public class CollectNearbyContainersSystem extends DelayedEntitySystem<EntitySto
         World world = store.getExternalData().getWorld();
         Store<ChunkStore> chunkStore = world.getChunkStore().getStore();
 
-        //noinspection removal
-        SpatialResource<Ref<ChunkStore>, ChunkStore> blockStateSpatialStructure = chunkStore.getResource(BlockStateModule.get().getItemContainerSpatialResourceType());
-        ObjectList<Ref<ChunkStore>> results = SpatialResource.getThreadLocalReferenceList();
+        SpatialResource<Ref<ChunkStore>, ChunkStore> blockStateSpatialStructure = chunkStore.getResource(BlockModule.get().getItemContainerSpatialResourceType());
+        List<Ref<ChunkStore>> results = SpatialResource.getThreadLocalReferenceList();
         double horizontalRadius = world.getGameplayConfig().getCraftingConfig().getBenchMaterialHorizontalChestSearchRadius();
         double verticalRadius = world.getGameplayConfig().getCraftingConfig().getBenchMaterialVerticalChestSearchRadius();
         double extraSearchRadius = 3;
@@ -54,9 +51,11 @@ public class CollectNearbyContainersSystem extends DelayedEntitySystem<EntitySto
         List<ItemContainer> containers = new ObjectArrayList<>();
 
         for (Ref<ChunkStore> blockRef : results) {
-            //noinspection removal
-            if (BlockState.getBlockState(blockRef, blockRef.getStore()) instanceof ItemContainerState chest) {
-                containers.add(chest.getItemContainer());
+            if (blockRef.isValid()) {
+                ItemContainerBlock chest = chunkStore.getComponent(blockRef, ItemContainerBlock.getComponentType());
+                if (chest != null) {
+                    containers.add(chest.getItemContainer());
+                }
             }
         }
         nearbyContainers.itemContainer = new CombinedItemContainer(containers.toArray(ItemContainer[]::new));
