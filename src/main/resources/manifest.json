@@ -1,7 +1,7 @@
 {
   "Group": "Drex",
   "Name": "BetterItemViewer",
-  "Version": "1.17.5",
+  "Version": "1.17.7",
   "Description": "Adds an item viewer with a bunch of extra information about tools, weapons and other items that are not visible in the base game",
   "Authors": [
     {
@@ -9,7 +9,7 @@
     }
   ],
   "Website": "website",
-  "ServerVersion": "2026.03.20-db226053c",
+  "ServerVersion": "2026.03.26-89796e57b",
   "Dependencies": {
     "Hytale:EntityModule": "*"
   },
