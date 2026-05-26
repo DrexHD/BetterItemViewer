@@ -2,7 +2,6 @@ package me.drex.betteritemviewer.command;
 
 import com.hypixel.hytale.component.Ref;
 import com.hypixel.hytale.component.Store;
-import com.hypixel.hytale.protocol.GameMode;
 import com.hypixel.hytale.protocol.packets.interface_.CustomPageLifetime;
 import com.hypixel.hytale.server.core.Message;
 import com.hypixel.hytale.server.core.command.system.AbstractCommand;
@@ -28,7 +27,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
     public BetterItemViewerCommand() {
         super("betteritemviewer", "Displays tools, weapons and other items and shows detailed information, like tool stats or weapon damage.", false);
         this.addAliases("biv", "jei");
-        this.setPermissionGroup(GameMode.Adventure);
+        this.setPermissionGroups("hytale:Adventurer");
     }
 
     @Nullable
@@ -47,7 +46,7 @@ public class BetterItemViewerCommand extends AbstractCommand {
                     try {
                         player.getPageManager().openCustomPage(ref, store, new ItemViewerPage(playerRefComponent, CustomPageLifetime.CanDismiss));
                     } catch (Exception e) {
-                        player.sendMessage(Message.raw("An error occurred while opening the GUI."));
+                        context.sendMessage(Message.raw("An error occurred while opening the GUI."));
                         BetterItemViewerPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
                         settings.clearFilters();
                     }

@@ -24,6 +24,7 @@ import com.hypixel.hytale.server.core.inventory.MaterialQuantity;
 import com.hypixel.hytale.server.core.inventory.container.CombinedItemContainer;
 import com.hypixel.hytale.server.core.inventory.container.ItemContainer;
 import com.hypixel.hytale.server.core.modules.entity.damage.DamageCause;
+import com.hypixel.hytale.server.core.modules.entity.damage.ResistanceModifier;
 import com.hypixel.hytale.server.core.modules.entitystats.asset.EntityStatType;
 import com.hypixel.hytale.server.core.modules.entitystats.modifier.StaticModifier;
 import com.hypixel.hytale.server.core.modules.i18n.I18nModule;
@@ -300,7 +301,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         if (player == null) return;
         UUIDComponent uuidComponent = store.getComponent(ref, UUIDComponent.getComponentType());
         if (uuidComponent == null) return;
-        if (!player.hasPermission("drex.betteritemviewer.give")) {
+        if (!playerRef.hasPermission("drex.betteritemviewer.give")) {
             return;
         }
 
@@ -545,7 +546,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         addNpcLoot(selectedItem, commandBuilder, index);
         addRecipes(itemContainer, settings, selectedItem, commandBuilder, eventBuilder);
 
-        boolean canCheat = player.hasPermission("drex.betteritemviewer.give");
+        boolean canCheat = playerRef.hasPermission("drex.betteritemviewer.give");
 
         commandBuilder.set("#GiveItemButton.Visible", canCheat);
         commandBuilder.set("#GiveItemStackButton.Visible", canCheat);
@@ -708,7 +709,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         List<Message> lines = new ArrayList<>();
 
         Map<DamageCause, StaticModifier[]> damageEnhancementValues = armor.getDamageEnhancementValues();
-        Map<DamageCause, StaticModifier[]> damageResistanceValues = armor.getDamageResistanceValues();
+        Map<DamageCause, ResistanceModifier[]> damageResistanceValues = armor.getDamageResistanceValues();
         Map<DamageClass, StaticModifier[]> damageClassEnhancement = armor.getDamageClassEnhancement();
         Int2ObjectMap<StaticModifier[]> statModifiers = armor.getStatModifiers();
 
@@ -723,9 +724,9 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
         }
 
         if (damageResistanceValues != null) {
-            for (Map.Entry<DamageCause, StaticModifier[]> damageCauseEntry : damageResistanceValues.entrySet()) {
-                for (StaticModifier staticModifier : damageCauseEntry.getValue()) {
-                    lines.add(formatSimpleStat(damageCauseEntry.getKey().getId() + " Resistance", formatStaticModifier(staticModifier)));
+            for (Map.Entry<DamageCause, ResistanceModifier[]> damageCauseEntry : damageResistanceValues.entrySet()) {
+                for (ResistanceModifier resistanceModifier : damageCauseEntry.getValue()) {
+                    lines.add(formatSimpleStat(damageCauseEntry.getKey().getId() + " Resistance", formatResistanceModifier(resistanceModifier)));
                 }
             }
         }
@@ -1003,6 +1004,20 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
             case MULTIPLICATIVE -> value = String.format("%.0f", staticModifier.getAmount() * 100) + "%";
         }
         if (staticModifier.getAmount() >= 0) {
+            return "+" + value;
+        }
+        return value;
+    }
+
+    private static String formatResistanceModifier(ResistanceModifier resistanceModifier) {
+        ResistanceModifier.ResistanceCalculationType calculationType = resistanceModifier.getCalculationType();
+        String value = "";
+
+        switch (calculationType) {
+            case FLAT -> value = String.format("%.0f", resistanceModifier.getAmount());
+            case PERCENT -> value = String.format("%.0f", resistanceModifier.getAmount() * 100) + "%";
+        }
+        if (resistanceModifier.getAmount() >= 0) {
             return "+" + value;
         }
         return value;

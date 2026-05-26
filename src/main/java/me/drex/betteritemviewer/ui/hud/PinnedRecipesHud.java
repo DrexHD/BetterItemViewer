@@ -23,7 +23,7 @@ public class PinnedRecipesHud extends CustomUIHud {
     private final ItemContainer itemContainer;
 
     public PinnedRecipesHud(@Nonnull PlayerRef playerRef, Set<String> pinnedRecipes, ItemContainer itemContainer) {
-        super(playerRef);
+        super(playerRef, "BetterItemViewer");
         this.pinnedRecipes = pinnedRecipes;
         this.itemContainer = itemContainer;
     }

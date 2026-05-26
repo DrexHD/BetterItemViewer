@@ -6,7 +6,6 @@ import com.google.gson.JsonParser;
 import com.hypixel.hytale.assetstore.AssetPack;
 import com.hypixel.hytale.component.Holder;
 import com.hypixel.hytale.component.Ref;
-import com.hypixel.hytale.math.vector.Vector3d;
 import com.hypixel.hytale.server.core.asset.AssetModule;
 import com.hypixel.hytale.server.core.asset.type.item.config.*;
 import com.hypixel.hytale.server.core.asset.type.item.config.container.ItemDropContainer;
@@ -27,6 +26,7 @@ import com.hypixel.hytale.server.npc.util.expression.Scope;
 import com.hypixel.hytale.server.spawning.ISpawnableWithModel;
 import it.unimi.dsi.fastutil.Pair;
 import me.drex.betteritemviewer.BetterItemViewerPlugin;
+import org.joml.Vector3d;
 
 import javax.annotation.Nonnull;
 import java.io.IOException;
