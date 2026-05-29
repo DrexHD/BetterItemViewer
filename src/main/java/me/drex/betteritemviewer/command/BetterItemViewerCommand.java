@@ -34,17 +34,17 @@ public class BetterItemViewerCommand extends AbstractCommand {
     @Override
     protected CompletableFuture<Void> execute(@Nonnull CommandContext context) {
         CommandSender sender = context.sender();
-        if (sender instanceof Player player) {
-            Ref<EntityStore> ref = player.getReference();
+        if (sender instanceof PlayerRef playerRef) {
+            Ref<EntityStore> ref = playerRef.getReference();
             if (ref != null && ref.isValid()) {
                 Store<EntityStore> store = ref.getStore();
                 World world = store.getExternalData().getWorld();
                 return CompletableFuture.runAsync(() -> {
-                    PlayerRef playerRefComponent = store.getComponent(ref, PlayerRef.getComponentType());
-                    if (playerRefComponent == null) return;
+                    Player player = store.getComponent(ref, Player.getComponentType());
+                    if (player == null) return;
                     BetterItemViewerComponent settings = store.ensureAndGetComponent(ref, BetterItemViewerComponent.getComponentType());
                     try {
-                        player.getPageManager().openCustomPage(ref, store, new ItemViewerPage(playerRefComponent, CustomPageLifetime.CanDismiss));
+                        player.getPageManager().openCustomPage(ref, store, new ItemViewerPage(playerRef, CustomPageLifetime.CanDismiss));
                     } catch (Exception e) {
                         context.sendMessage(Message.raw("An error occurred while opening the GUI."));
                         BetterItemViewerPlugin.get().getLogger().at(Level.SEVERE).withCause(e).log("Failed to open BetterItemViewerGui");
