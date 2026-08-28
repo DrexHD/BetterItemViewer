@@ -790,7 +790,7 @@ public class ItemViewerPage extends InteractiveCustomUIPage<ItemViewerPage.GuiDa
 
         itemDetails.mobLoot.forEach((roleName, mobDropDetails) -> {
             commandBuilder.append(tag, "Pages/Drex_BetterItemViewer_RoleEntry.ui");
-            commandBuilder.set(tag + "[" + i.get() + "] #RoleIcon.AssetPath", "UI/Custom/Pages/Memories/npcs/" + roleName + ".png");
+            commandBuilder.set(tag + "[" + i.get() + "] #RoleIcon.AssetPath", "Icons/ModelsGenerated/" + roleName + ".png");
             commandBuilder.set(tag + "[" + i.get() + "] #RoleName.TextSpans", Message.translation(mobDropDetails.translationKey()));
             commandBuilder.set(tag + "[" + i.get() + "] #DropItemQuantity.TextSpans", Message.raw(mobDropDetails.range().format() + " Items").color("#aaaaaa"));
             i.getAndIncrement();

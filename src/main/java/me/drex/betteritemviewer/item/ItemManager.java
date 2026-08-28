@@ -19,6 +19,7 @@ import com.hypixel.hytale.server.npc.asset.builder.Builder;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderInfo;
 import com.hypixel.hytale.server.npc.asset.builder.BuilderSupport;
 import com.hypixel.hytale.server.npc.entities.NPCEntity;
+import com.hypixel.hytale.server.npc.instructions.ExecutionSupport;
 import com.hypixel.hytale.server.npc.role.Role;
 import com.hypixel.hytale.server.npc.systems.PositionCacheSystems;
 import com.hypixel.hytale.server.npc.util.expression.ExecutionContext;
@@ -179,13 +180,12 @@ public class ItemManager {
                         BuilderSupport builderSupport = new BuilderSupport(
                             NPCPlugin.get().getBuilderManager(), npcComponent, holder, new ExecutionContext(), roleBuilder, null
                         );
-                        Role role = NPCPlugin.buildRole(roleBuilder, builderInfo, builderSupport, roleIndex);
+                        Role role = NPCPlugin.buildRole(holder, roleBuilder, builderInfo, builderSupport, roleIndex);
                         String memoryName = role.getAppearanceName();
                         String memoriesNameOverride = getMemoriesNameOverride(roleBuilder);
                         if (memoriesNameOverride != null && !memoriesNameOverride.isEmpty()) {
                             memoryName = memoriesNameOverride;
                         }
-                        PositionCacheSystems.initialisePositionCache(role, builderSupport.getStateEvaluator(), 0.0);
                         String dropListId = role.getDropListId();
                         if (dropListId == null) continue;
                         ItemDropList itemDropList = ItemDropList.getAssetMap().getAsset(dropListId);
